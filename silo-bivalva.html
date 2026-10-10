@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Silo bivalva 3D</title>
+<style>
+:root {
+  --bg: #dfe6ee;
+  --panel: rgba(255, 255, 255, 0.9);
+  --line: rgba(20, 30, 50, 0.14);
+  --fg: #17202e;
+  --muted: #5b6678;
+  --accent: #c8955a;
+  --btn: #eef2f7;
+  --btn-on: #17202e;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
+#scene { position: fixed; inset: 0; }
+#labels { position: fixed; inset: 0; pointer-events: none; }
+
+.panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 6px 24px rgba(20, 30, 50, 0.12); backdrop-filter: blur(6px); }
+#hud { top: 16px; left: 16px; width: 300px; padding: 14px 16px; }
+#hud h1 { font-size: 17px; margin: 0 0 2px; letter-spacing: 0.01em; }
+#hud .sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+#phase { font-size: 14px; font-weight: 600; min-height: 20px; }
+.bar { height: 6px; background: rgba(20,30,50,0.1); border-radius: 3px; margin: 8px 0 12px; overflow: hidden; }
+.bar > div { height: 100%; width: 0; background: var(--accent); }
+.btns { display: flex; flex-wrap: wrap; gap: 6px; }
+button { font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--line);
+  background: var(--btn); color: var(--fg); cursor: pointer; }
+button:hover { border-color: rgba(20,30,50,0.35); }
+button.on { background: var(--btn-on); color: #fff; border-color: var(--btn-on); }
+.row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
+.row input { flex: 1; }
+.keys { font-size: 11px; color: var(--muted); margin-top: 10px; }
+
+#legend { left: 16px; bottom: 16px; padding: 10px 14px; font-size: 12px; max-width: 300px; }
+#legend .it { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
+#legend i { width: 14px; height: 14px; border-radius: 3px; flex: none; border: 1px solid rgba(0,0,0,0.2); }
+
+.lbl { font-size: 11.5px; line-height: 1.25; padding: 3px 7px; border-radius: 5px; white-space: nowrap;
+  background: rgba(255,255,255,0.92); color: #17202e; border-left: 4px solid; box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  transform: translateY(-14px); }
+.lbl b { font-weight: 700; }
+
+@media (max-width: 640px) {
+  #hud { left: 16px; right: 16px; width: auto; top: 12px; padding: 10px 12px; }
+  #hud .sub, .keys { display: none; }
+  #legend { display: none; }
+  .lbl { font-size: 10px; }
+}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="scene"></div>
+<div id="labels"></div>
+
+<div id="hud" class="panel">
+  <h1>Silo bivalva</h1>
+  <div class="sub">2 compartimentos 2,5 × 1,6 m · H = 6 m · chapa 6,35 mm</div>
+  <div id="phase">Cargando…</div>
+  <div class="bar"><div id="prog"></div></div>
+  <div class="btns">
+    <button id="bPause">⏸ Pausar</button>
+    <button id="bReset">↺ Reiniciar</button>
+    <button id="bTrans">Chapa semitransparente</button>
+    <button id="bLabels" class="on">Etiquetas</button>
+  </div>
+  <div class="row">Velocidad <input id="speed" type="range" min="0.25" max="3" step="0.25" value="1"><span id="speedV">1×</span></div>
+  <div class="keys">Mouse: girar · rueda: zoom · botón derecho: desplazar · Espacio: pausa · R: reiniciar · T: transparencia</div>
+</div>
+
+<div id="legend" class="panel"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+// ------------------------------------------------------------------
+// Geometría (metros). Eje X = lado de 2,5 m; eje Z = lado de 3,2 m
+// (los dos compartimentos están uno detrás del otro sobre Z).
+// ------------------------------------------------------------------
+const A = 2.5;                 // ancho en planta
+const BC = 1.6;                // profundidad de cada compartimento
+const L = 2 * BC;              // profundidad total (3,2 m)
+const H = 6.0;                 // altura de chapa lisa
+const TW = 0.00635;            // chapa 6,35 mm
+const PLATE = 0.25, PLATE_T = 0.009525;   // placa base 250x250x3/8"
+const LEG_H = 3.0, S_LEG = 0.15;          // patas SHS 150x150x3,2
+const Y0 = PLATE_T + LEG_H;               // cota del fondo del cuerpo
+const HOP = 0.5;               // altura de tolva
+const OUT = 0.30;              // boca de descarga (cuadrada)
+const S_RING = 0.08;           // anillos SHS 80x80x2,5
+const S_VERT = 0.08;           // perfiles verticales (sección no especificada: se adopta 80x80)
+const S_TAB = 0.04;            // perfiles del tabique SHS 40x40x3,2
+const RING_Y = Array.from({ length: 6 }, (_, i) => Y0 + 0.5 + i);  // 6 anillos cada 1 m
+const COMP_Z = [-BC / 2, BC / 2];
+
+// ------------------------------------------------------------------
+// Escena
+// ------------------------------------------------------------------
+const host = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
+host.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer({ element: document.getElementById('labels') });
+labelRenderer.setSize(innerWidth, innerHeight);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xdfe6ee);
+scene.fog = new THREE.Fog(0xdfe6ee, 30, 70);
+
+const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.05, 200);
+camera.position.set(10.5, 7.2, 12.5);
+if (innerWidth / innerHeight < 0.8) camera.position.multiplyScalar(1.7);  // pantallas angostas: alejar
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 4.0, 0);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI * 0.495;
+controls.minDistance = 2;
+controls.maxDistance = 40;
+controls.update();
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f80, 0.9));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(8, 16, 10);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -8, right: 8, top: 12, bottom: -4, near: 1, far: 40 });
+sun.shadow.bias = -0.0005;
+scene.add(sun);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200),
+  new THREE.MeshStandardMaterial({ color: 0xb7c2a4, roughness: 1 }));
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.3;
+ground.receiveShadow = true;
+scene.add(ground);
+const grid = new THREE.GridHelper(40, 40, 0x8f9a80, 0xa3ad94);
+grid.position.y = -0.299;
+scene.add(grid);
+
+// ------------------------------------------------------------------
+// Materiales y colores por tipo de elemento
+// ------------------------------------------------------------------
+const std = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.25, ...o });
+const TYPES = {
+  platea:  { name: 'Platea de hormigón',                color: 0x9d9d96, mat: std(0x9d9d96, { roughness: 0.95, metalness: 0 }) },
+  placa:   { name: 'Placa base 250×250×3/8"',           color: 0x3d4450, mat: std(0x3d4450, { metalness: 0.6 }) },
+  pata:    { name: 'Pata SHS 150×150×3,2',              color: 0xc0392b, mat: std(0xc0392b) },
+  tolva:   { name: 'Tolva 30° · chapa 6,35 mm',         color: 0x4f86b8, mat: std(0x4f86b8, { side: THREE.DoubleSide }) },
+  boca:    { name: 'Boca de descarga',                  color: 0x2b2b2b, mat: std(0x2b2b2b) },
+  chapa:   { name: 'Chapa lisa 6,35 mm',                color: 0xbcc7d2, mat: std(0xbcc7d2, { side: THREE.DoubleSide, metalness: 0.45, roughness: 0.45 }) },
+  tabique: { name: 'Tabique · chapa 6,35 mm',           color: 0x8fb0d4, mat: std(0x8fb0d4, { side: THREE.DoubleSide }) },
+  anillo:  { name: 'Anillo SHS 80×80×2,5',              color: 0xf0a320, mat: std(0xf0a320) },
+  vert:    { name: 'Perfil vertical SHS 80×80 (adoptado)', color: 0x2e9e5b, mat: std(0x2e9e5b) },
+  ptab:    { name: 'Perfil tabique SHS 40×40×3,2',      color: 0x8e44ad, mat: std(0x8e44ad) },
+  techo:   { name: 'Techo cerrado · chapa',             color: 0x707d8c, mat: std(0x707d8c, { side: THREE.DoubleSide }) },
+  mani:    { name: 'Maní',                              color: 0xc8955a, mat: null },
+};
+const SHELL = [TYPES.tolva.mat, TYPES.chapa.mat, TYPES.tabique.mat, TYPES.techo.mat];
+
+document.getElementById('legend').innerHTML = Object.values(TYPES).map(t =>
+  `<div class="it"><i style="background:#${t.color.toString(16).padStart(6, '0')}"></i>${t.name}</div>`).join('');
+
+// ------------------------------------------------------------------
+// Etapas de armado
+// ------------------------------------------------------------------
+const stages = ['Platea', 'Patas y placas base', 'Tolvas y bocas', 'Chapas y tabique',
+  'Anillos', 'Perfiles verticales y del tabique', 'Techo'].map(name => ({ name, items: [], labels: [] }));
+
+function add(stage, mesh) {
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.userData.baseY = mesh.position.y;
+  mesh.visible = false;
+  scene.add(mesh);
+  stages[stage].items.push(mesh);
+  return mesh;
+}
+function box(w, h, d, type, x, y, z) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), TYPES[type].mat);
+  m.position.set(x, y, z);
+  return m;
+}
+function label(stage, type, text, x, y, z) {
+  const div = document.createElement('div');
+  div.className = 'lbl';
+  div.style.borderColor = '#' + TYPES[type].color.toString(16).padStart(6, '0');
+  div.innerHTML = text;
+  const obj = new CSS2DObject(div);
+  obj.position.set(x, y, z);
+  obj.visible = false;
+  scene.add(obj);
+  stages[stage].labels.push(obj);
+}
+
+// Construye superficies a partir de cuadriláteros (a,b,c,d en sentido antihorario)
+function quadsGeometry(quads) {
+  const pos = [], uv = [];
+  for (const [a, b, c, d] of quads) {
+    for (const p of [a, b, c, a, c, d]) {
+      pos.push(...p);
+      uv.push((p[0] + p[2]) * 1.5, p[1] * 1.5);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.computeVertexNormals();
+  return g;
+}
+// Tronco de pirámide (caras laterales) entre un rectángulo superior y uno inferior
+function frustumQuads(zc, hwT, hdT, yT, hwB, hdB, yB) {
+  const T = [[-hwT, yT, zc - hdT], [hwT, yT, zc - hdT], [hwT, yT, zc + hdT], [-hwT, yT, zc + hdT]];
+  const B = [[-hwB, yB, zc - hdB], [hwB, yB, zc - hdB], [hwB, yB, zc + hdB], [-hwB, yB, zc + hdB]];
+  return [0, 1, 2, 3].map(i => { const j = (i + 1) % 4; return [B[i], B[j], T[j], T[i]]; });
+}
+
+// 0 · Platea
+add(0, box(A + 1.6, 0.3, L + 1.6, 'platea', 0, -0.15, 0));
+label(0, 'platea', '<b>Platea de hormigón</b>', A / 2 + 0.8, 0, -L / 2 - 0.2);
+
+// 1 · Patas en las 4 esquinas (separadas 2,5 m) con placa base
+const LX = A / 2 - S_LEG / 2, LZ = L / 2 - S_LEG / 2;
+for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) {
+  add(1, box(PLATE, PLATE_T, PLATE, 'placa', sx * LX, PLATE_T / 2, sz * LZ));
+  add(1, box(S_LEG, LEG_H, S_LEG, 'pata', sx * LX, PLATE_T + LEG_H / 2, sz * LZ));
+}
+label(1, 'pata', '<b>Pata</b> SHS 150×150×3,2 · h = 3 m', LX + 0.08, 1.6, LZ + 0.08);
+label(1, 'placa', '<b>Placa base</b> 250×250×3/8"', LX + 0.15, 0.02, LZ + 0.15);
+
+// 2 · Tolvas (una por compartimento) con boca central
+for (const zc of COMP_Z) {
+  const g = quadsGeometry(frustumQuads(zc, A / 2, BC / 2, Y0, OUT / 2, OUT / 2, Y0 - HOP));
+  add(2, new THREE.Mesh(g, TYPES.tolva.mat));
+  add(2, box(OUT + 0.02, 0.22, OUT + 0.02, 'boca', 0, Y0 - HOP - 0.11, zc));
+  add(2, box(OUT + 0.14, 0.02, OUT + 0.14, 'boca', 0, Y0 - HOP - 0.22, zc));
+}
+label(2, 'tolva', '<b>Tolva</b> 30° · h = 0,5 m', 0, Y0 - 0.25, BC / 2 + 0.5);
+label(2, 'boca', '<b>Boca de descarga</b>', 0.2, Y0 - HOP - 0.25, BC / 2);
+
+// 3 · Chapas (paneles de 1 m que se apilan) y tabique
+for (let r = 0; r < 6; r++) {
+  const y = Y0 + r + 0.5;
+  add(3, box(A, 1, TW, 'chapa', 0, y, -(L / 2 - TW / 2)));
+  add(3, box(A, 1, TW, 'chapa', 0, y, L / 2 - TW / 2));
+  add(3, box(TW, 1, L - 2 * TW, 'chapa', -(A / 2 - TW / 2), y, 0));
+  add(3, box(TW, 1, L - 2 * TW, 'chapa', A / 2 - TW / 2, y, 0));
+  add(3, box(A - 2 * TW, 1, TW, 'tabique', 0, y, 0));
+}
+label(3, 'chapa', '<b>Chapa lisa</b> 6,35 mm · h = 6 m', -A / 2 - 0.05, Y0 + 3, BC / 2);
+label(3, 'tabique', '<b>Tabique</b> 6,35 mm', -A / 2 + 0.3, Y0 + H - 1.4, 0);
+
+// 4 · Anillos SHS 80x80x2,5 cada 1 m
+for (const y of RING_Y) {
+  add(4, box(A + 2 * S_RING, S_RING, S_RING, 'anillo', 0, y, -(L / 2 + S_RING / 2)));
+  add(4, box(A + 2 * S_RING, S_RING, S_RING, 'anillo', 0, y, L / 2 + S_RING / 2));
+  add(4, box(S_RING, S_RING, L, 'anillo', -(A / 2 + S_RING / 2), y, 0));
+  add(4, box(S_RING, S_RING, L, 'anillo', A / 2 + S_RING / 2, y, 0));
+}
+label(4, 'anillo', '<b>Anillo</b> SHS 80×80×2,5 · c/1 m', A / 2 + 0.1, RING_Y[5], -BC / 2);
+
+// 5 · Perfiles verticales (uno en el medio de cada cara) y perfiles del tabique
+const OV = S_RING + S_VERT / 2;  // por fuera de los anillos
+add(5, box(S_VERT, H, S_VERT, 'vert', 0, Y0 + H / 2, -(L / 2 + OV)));
+add(5, box(S_VERT, H, S_VERT, 'vert', 0, Y0 + H / 2, L / 2 + OV));
+add(5, box(S_VERT, H, S_VERT, 'vert', -(A / 2 + OV), Y0 + H / 2, 0));
+add(5, box(S_VERT, H, S_VERT, 'vert', A / 2 + OV, Y0 + H / 2, 0));
+for (const y of RING_Y) for (const s of [-1, 1])
+  add(5, box(A - 2 * TW, S_TAB, S_TAB, 'ptab', 0, y, s * (TW / 2 + S_TAB / 2)));
+label(5, 'vert', '<b>Perfil vertical</b> (centro de cara)', 0, Y0 + 4, L / 2 + OV + 0.05);
+label(5, 'ptab', '<b>Perfil tabique</b> SHS 40×40×3,2 · ambos lados', A / 2 - 0.4, Y0 + 1.5, 0.03);
+
+// 6 · Techo cerrado (con tapas de inspección/carga)
+add(6, box(A, TW, L, 'techo', 0, Y0 + H + TW / 2, 0));
+for (const zc of COMP_Z) add(6, box(0.45, 0.06, 0.45, 'boca', 0, Y0 + H + 0.03, zc));
+label(6, 'techo', '<b>Techo cerrado</b>', A / 2 - 0.3, Y0 + H + 0.05, BC - 0.3);
+
+// ------------------------------------------------------------------
+// Maní: volumen que sube (recortado por un plano) + partículas
+// ------------------------------------------------------------------
+function maniTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#c69259';
+  g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 900; i++) {
+    const l = 45 + Math.random() * 25;
+    g.fillStyle = `hsl(${28 + Math.random() * 8}, ${45 + Math.random() * 15}%, ${l}%)`;
+    g.beginPath();
+    g.ellipse(Math.random() * 256, Math.random() * 256, 5 + Math.random() * 4, 3 + Math.random() * 2,
+      Math.random() * Math.PI, 0, Math.PI * 2);
+    g.fill();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const maniTex = maniTexture();
+const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+const fillMat = new THREE.MeshStandardMaterial({ map: maniTex, roughness: 0.9, side: THREE.DoubleSide, clippingPlanes: [clipPlane] });
+const capMat = new THREE.MeshStandardMaterial({ map: maniTex, roughness: 0.9, side: THREE.DoubleSide });
+
+const IN = 0.012;                              // separación de la chapa
+const HW = A / 2 - IN, HD = BC / 2 - TW / 2 - IN, OB = OUT / 2 - 0.005;
+const Y_BOT = Y0 - HOP, Y_TOP = Y0 + H - 0.3;  // nivel mínimo y máximo de llenado
+const fills = [], caps = [];
+for (const zc of COMP_Z) {
+  const quads = [
+    ...frustumQuads(zc, HW, HD, Y0, OB, OB, Y_BOT),
+    ...frustumQuads(zc, HW, HD, Y0 + H, HW, HD, Y0),
+  ];
+  const f = new THREE.Mesh(quadsGeometry(quads), fillMat);
+  f.visible = false;
+  scene.add(f);
+  fills.push(f);
+  const cap = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), capMat);
+  cap.rotation.x = -Math.PI / 2;
+  cap.position.z = zc;
+  cap.visible = false;
+  scene.add(cap);
+  caps.push(cap);
+}
+const halfAt = y => {
+  if (y >= Y0) return [HW, HD];
+  const t = (y - Y_BOT) / HOP;
+  return [OB + t * (HW - OB), OB + t * (HD - OB)];
+};
+// Tabla nivel ↔ volumen para que el llenado sea a caudal constante
+const VT = [];
+{
+  let v = 0; const N = 400, dy = (Y_TOP - Y_BOT) / N;
+  for (let i = 0; i <= N; i++) {
+    const y = Y_BOT + i * dy;
+    if (i > 0) { const [a, b] = halfAt(y - dy / 2); v += 4 * a * b * dy; }
+    VT.push([y, v]);
+  }
+}
+const V_TOTAL = VT[VT.length - 1][1];
+function levelFromFrac(f) {
+  const v = Math.min(Math.max(f, 0), 1) * V_TOTAL;
+  let lo = 0, hi = VT.length - 1;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (VT[m][1] < v) lo = m; else hi = m; }
+  const [y0, v0] = VT[lo], [y1, v1] = VT[hi];
+  return y0 + (y1 - y0) * ((v - v0) / Math.max(v1 - v0, 1e-9));
+}
+
+// Montoncito bajo cada boca durante la descarga (decorativo)
+const pileGeo = new THREE.ConeGeometry(1, 1, 40, 1, true).translate(0, 0.5, 0);
+const piles = COMP_Z.map(zc => {
+  const p = new THREE.Mesh(pileGeo, capMat);
+  p.position.set(0, 0, zc);
+  p.visible = false;
+  p.castShadow = true;
+  scene.add(p);
+  return p;
+});
+
+// Partículas (granos de maní)
+const MAXP = 2500;
+const grainGeo = new THREE.SphereGeometry(0.03, 8, 6).scale(1.7, 1, 1);
+const grains = new THREE.InstancedMesh(grainGeo, new THREE.MeshStandardMaterial({ color: 0xd4a066, roughness: 0.8 }), MAXP);
+grains.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+grains.count = 0;
+grains.frustumCulled = false;
+scene.add(grains);
+const P = [];
+const dummy = new THREE.Object3D();
+function spawn(x, y, z, vx, vy, vz, floor) {
+  if (P.length >= MAXP) return;
+  P.push({ x, y, z, vx, vy, vz, floor, rx: Math.random() * 6, ry: Math.random() * 6 });
+}
+
+// ------------------------------------------------------------------
+// Línea de tiempo
+// ------------------------------------------------------------------
+const STAGE = 2.4;
+const T_BUILD = stages.length * STAGE;
+const T_FILL0 = T_BUILD + 1.0, D_FILL = 12;
+const T_FILL1 = T_FILL0 + D_FILL;
+const T_DIS0 = T_FILL1 + 2.5, D_DIS = 12;
+const T_DIS1 = T_DIS0 + D_DIS;
+const T_END = T_DIS1 + 3;
+
+let T = 0, paused = false, speed = 1, showLabels = true, transparent = false;
+let userSetTrans = false, cycles = 0, spawnAcc = 0;
+
+function setTransparent(on) {
+  transparent = on;
+  for (const m of SHELL) {
+    m.transparent = on;
+    m.opacity = on ? 0.22 : 1;
+    m.depthWrite = !on;
+    m.needsUpdate = true;
+  }
+  document.getElementById('bTrans').classList.toggle('on', on);
+}
+
+function reset() {
+  T = 0; cycles = 0; P.length = 0; userSetTrans = false;
+  setTransparent(false);
+}
+
+const ease = k => 1 - Math.pow(1 - k, 3);
+function updateBuild() {
+  stages.forEach((st, si) => {
+    const s0 = si * STAGE, n = st.items.length;
+    st.items.forEach((m, i) => {
+      const delay = n > 1 ? (i / (n - 1)) * STAGE * 0.55 : 0;
+      const k = Math.min(Math.max((T - s0 - delay) / (STAGE * 0.4), 0), 1);
+      m.visible = k > 0;
+      m.position.y = m.userData.baseY + (1 - ease(k)) * 3.5;
+    });
+    for (const l of st.labels) l.visible = showLabels && T > s0 + STAGE;
+  });
+}
+
+function fillFraction() {
+  if (T < T_FILL0) return 0;
+  if (T < T_FILL1) return (T - T_FILL0) / D_FILL;
+  if (T < T_DIS0) return 1;
+  if (T < T_DIS1) return 1 - (T - T_DIS0) / D_DIS;
+  return 0;
+}
+
+function phaseText(f) {
+  if (T < T_BUILD) {
+    const si = Math.min(Math.floor(T / STAGE), stages.length - 1);
+    return `Armado ${si + 1}/${stages.length}: ${stages[si].name}`;
+  }
+  if (T < T_FILL0) return 'Silo armado';
+  if (T < T_FILL1) return `Llenando de maní · ${Math.round(f * 100)} %`;
+  if (T < T_DIS0) return 'Silo lleno';
+  if (T < T_DIS1) return `Descargando por las bocas · ${Math.round(f * 100)} %`;
+  return 'Silo vacío';
+}
+
+function step(dt) {
+  T += dt;
+  if (T > T_END) { T = T_FILL0 - 0.5; cycles++; }
+
+  // Al empezar a llenar, se hace la chapa semitransparente (si el usuario no eligió otra cosa)
+  if (T >= T_FILL0 - 0.5 && T < T_FILL1 && !transparent && !userSetTrans) setTransparent(true);
+
+  const f = fillFraction();
+  const level = levelFromFrac(f);
+  const filling = T >= T_FILL0 && T < T_FILL1;
+  const discharging = T >= T_DIS0 && T < T_DIS1;
+
+  // Partículas nuevas
+  spawnAcc += dt;
+  const rate = 1 / 260;  // una partícula cada ~4 ms por compartimento
+  while (spawnAcc > rate) {
+    spawnAcc -= rate;
+    for (const zc of COMP_Z) {
+      if (filling) {
+        spawn((Math.random() - 0.5) * 0.3, Y0 + H - 0.05, zc + (Math.random() - 0.5) * 0.3,
+          (Math.random() - 0.5) * 0.9, -0.5, (Math.random() - 0.5) * 0.6, 'level');
+      } else if (discharging) {
+        spawn((Math.random() - 0.5) * OUT * 0.8, Y0 - HOP - 0.22, zc + (Math.random() - 0.5) * OUT * 0.8,
+          (Math.random() - 0.5) * 0.15, -0.8, (Math.random() - 0.5) * 0.15, 'pile');
+      }
+    }
+  }
+
+  // Montones bajo las bocas
+  let pr = 0;
+  if (T >= T_DIS0) pr = 0.7 * Math.cbrt(1 - f);
+  else if (cycles > 0 && T < T_FILL0 + 2) pr = 0.7 * Math.max(0, 1 - (T - (T_FILL0 - 0.5)) / 2.5);
+  for (const p of piles) {
+    p.visible = pr > 0.01;
+    p.scale.set(pr, pr * Math.tan(Math.PI / 6), pr);
+  }
+  const pileTop = pr * Math.tan(Math.PI / 6);
+
+  // Movimiento
+  let k = 0;
+  for (let i = P.length - 1; i >= 0; i--) {
+    const p = P[i];
+    p.vy -= 9.81 * dt;
+    p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt;
+    // rebote contra las paredes del compartimento mientras cae adentro
+    if (p.floor === 'level') {
+      if (Math.abs(p.x) > HW) { p.x = Math.sign(p.x) * HW; p.vx *= -0.4; }
+      if (p.y <= level) { P[i] = P[P.length - 1]; P.pop(); continue; }
+    } else if (p.y <= pileTop * 0.85) { P[i] = P[P.length - 1]; P.pop(); continue; }
+  }
+  for (const p of P) {
+    dummy.position.set(p.x, p.y, p.z);
+    p.rx += dt * 5;
+    dummy.rotation.set(p.rx, p.ry, 0);
+    dummy.updateMatrix();
+    grains.setMatrixAt(k++, dummy.matrix);
+  }
+  grains.count = k;
+  grains.instanceMatrix.needsUpdate = true;
+
+  // Volumen de maní
+  const show = f > 0.0005;
+  clipPlane.constant = level;
+  const [hw, hd] = halfAt(level);
+  fills.forEach((m, i) => {
+    m.visible = show;
+    caps[i].visible = show;
+    caps[i].position.y = level;
+    caps[i].scale.set(hw * 2, hd * 2, 1);
+  });
+
+  updateBuild();
+  document.getElementById('phase').textContent = phaseText(f);
+  document.getElementById('prog').style.width = `${Math.min(T / T_END, 1) * 100}%`;
+}
+
+// ------------------------------------------------------------------
+// UI
+// ------------------------------------------------------------------
+const bPause = document.getElementById('bPause');
+function togglePause() {
+  paused = !paused;
+  bPause.textContent = paused ? '▶ Reanudar' : '⏸ Pausar';
+  bPause.classList.toggle('on', paused);
+}
+bPause.onclick = togglePause;
+document.getElementById('bReset').onclick = reset;
+document.getElementById('bTrans').onclick = () => { userSetTrans = true; setTransparent(!transparent); };
+const bLabels = document.getElementById('bLabels');
+bLabels.onclick = () => { showLabels = !showLabels; bLabels.classList.toggle('on', showLabels); updateBuild(); };
+const speedIn = document.getElementById('speed');
+speedIn.oninput = () => { speed = +speedIn.value; document.getElementById('speedV').textContent = speed + '×'; };
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.code === 'Space') { e.preventDefault(); togglePause(); }
+  else if (e.key === 'r' || e.key === 'R') reset();
+  else if (e.key === 't' || e.key === 'T') document.getElementById('bTrans').click();
+});
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  labelRenderer.setSize(innerWidth, innerHeight);
+});
+
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  step(paused ? 0 : dt * speed);
+  controls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+});
+
+// Acceso para depuración / capturas
+window.__silo = { setTime: t => { T = t; }, get T() { return T; } };
+</script>
+</body>
+</html>

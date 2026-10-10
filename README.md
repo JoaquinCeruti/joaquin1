@@ -16,3 +16,16 @@ Abre `index.html` en el navegador (necesita conexión a internet para cargar Thr
 ## Controles
 
 Caudal, diámetro de la garganta, desnivel de la salida, ritmo de la animación, capas visibles y vistas de cámara predefinidas.
+
+---
+
+# Silo bivalva en 3D
+
+Abrí `silo-bivalva.html` en el navegador (necesita internet para cargar Three.js desde el CDN).
+
+- **Armado por etapas:** platea, patas y placas base, tolvas y bocas, chapas y tabique, anillos, perfiles, techo.
+- **Llenado de maní** (volumen que sube + granos que caen por la boca de carga) y **descarga** por las dos bocas.
+- **Controles:** cámara orbitable, pausar, reiniciar, chapa semitransparente, etiquetas y velocidad. Teclas: Espacio, R, T.
+
+Notas de modelado: patas en las 4 esquinas; perfiles verticales con SHS 80×80 adoptado (sección no especificada);
+la tolva baja 0,5 m hasta una boca de 0,30 × 0,30 m, así que sus caras quedan a ~24° y ~38° (≈30° en promedio).
