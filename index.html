@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bernoulli en 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: full-bleed 3D laboratory at night; glass instrument panels float over it on desktop and stack under it on phones.
+   Colour = physics: cyan is pressure (P), orange is motion (½ρv²), green is height (ρgz). */
+:root {
+  --bg: #060a16;
+  --panel: rgba(11, 17, 36, 0.82);
+  --panel-solid: #0d1430;
+  --line: rgba(150, 175, 255, 0.18);
+  --fg: #e9eeff;
+  --muted: #98a4c8;
+  --p: #2bd6ff;
+  --k: #ff8a3d;
+  --z: #4ee08a;
+  --e: #fff1c9;
+  --warn: #ff5d73;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.5 var(--f-body);
+  overflow: hidden;
+}
+.app { position: relative; height: 100%; }
+#view { position: absolute; inset: 0; overflow: hidden; }
+#view canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.labels { position: absolute; inset: 0; pointer-events: none; }
+
+.overlay {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 330px;
+  grid-template-rows: auto 1fr auto;
+  gap: 16px;
+  padding: 16px;
+}
+.overlay > * { pointer-events: auto; }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Header */
+header { grid-column: 1; grid-row: 1; align-self: start; justify-self: start; padding: 14px 18px; max-width: 620px; }
+.eyebrow { font: 600 11px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+h1 { font: 800 clamp(24px, 3.2vw, 36px)/1.05 var(--f-display); margin: 0 0 10px; letter-spacing: -.01em; text-wrap: balance; }
+.eq { font: 600 clamp(16px, 2vw, 21px)/1.3 var(--f-mono); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.eq .t { padding: 2px 8px; border-radius: 8px; }
+.tP { color: var(--p); background: rgba(43, 214, 255, .12); }
+.tK { color: var(--k); background: rgba(255, 138, 61, .13); }
+.tZ { color: var(--z); background: rgba(78, 224, 138, .12); }
+.eq .op { color: var(--muted); }
+.eq-key { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.eq-key b { font-weight: 700; }
+
+/* Controls */
+.controls { grid-column: 2; grid-row: 2 / 4; align-self: start; padding: 16px; max-height: 100%; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
+.controls h2, .energy h2 { font: 700 13px/1 var(--f-display); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.slider { display: grid; gap: 6px; }
+.slider .row { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.slider label { font-weight: 700; }
+.slider output { font: 600 14px var(--f-mono); color: var(--e); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.slider small { color: var(--muted); font-size: 12.5px; line-height: 1.35; }
+input[type=range] { width: 100%; accent-color: var(--p); height: 22px; }
+.toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.toggles label { display: flex; gap: 8px; align-items: center; font-size: 13.5px; cursor: pointer; }
+input[type=checkbox] { accent-color: var(--p); width: 16px; height: 16px; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+button {
+  font: 700 13px/1 var(--f-body);
+  color: var(--fg);
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 9px 14px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+button:hover { background: rgba(255, 255, 255, .12); border-color: rgba(200, 215, 255, .4); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--e); outline-offset: 2px; }
+button.primary { background: var(--p); color: #04121c; border-color: transparent; }
+button.primary:hover { background: #7fe6ff; }
+.legend { display: grid; gap: 10px; }
+.legend .bar { height: 10px; border-radius: 6px; }
+.legend .ends { display: flex; justify-content: space-between; font: 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.legend .name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+#lgV { background: linear-gradient(90deg, #3557ff, #b44dff 30%, #ff6a2a 65%, #ffe680); }
+#lgP { background: linear-gradient(90deg, #7b2cff, #3d7bff 50%, #14e0ff); }
+.note { font-size: 13px; color: var(--muted); margin: 0; line-height: 1.45; }
+
+/* Energy panel */
+.energy { grid-column: 1; grid-row: 3; align-self: end; justify-self: start; width: min(100%, 640px); padding: 14px 16px; display: grid; gap: 10px; }
+.erow { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.pt { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 800 14px var(--f-display); background: var(--fg); color: var(--bg); }
+.stack { display: flex; height: 22px; border-radius: 6px; overflow: hidden; background: rgba(255, 255, 255, .05); }
+.stack span { height: 100%; transition: width .35s ease; display: flex; align-items: center; justify-content: center; font: 600 11px var(--f-mono); color: #061018; overflow: hidden; white-space: nowrap; }
+.stack .sP { background: var(--p); }
+.stack .sK { background: var(--k); }
+.stack .sZ { background: var(--z); }
+.tot { font: 600 13px var(--f-mono); color: var(--e); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.emeta { font: 12px var(--f-mono); color: var(--muted); grid-column: 2 / 4; margin-top: -6px; font-variant-numeric: tabular-nums; }
+.warn { color: var(--warn); font-weight: 700; font-size: 13px; margin: 0; }
+
+/* Guided tour */
+.tour[hidden] ~ .controls { grid-row: 1 / 4; }
+.tour { grid-column: 2; grid-row: 1; align-self: start; padding: 16px 18px; display: grid; gap: 8px; border-color: rgba(255, 241, 201, .35); }
+.tour .step { font: 600 11px var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--e); }
+.tour h3 { font: 800 20px/1.15 var(--f-display); margin: 0; text-wrap: balance; }
+.tour p { margin: 0; max-width: 62ch; }
+.tour .btns { margin-top: 4px; }
+
+/* 3D labels */
+.lbl {
+  position: absolute; left: 0; top: 0;
+  display: flex; gap: 8px; align-items: center;
+  padding: 5px 10px 5px 5px;
+  background: rgba(8, 12, 28, .8);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font: 600 12px var(--f-mono);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  will-change: transform;
+}
+.lbl .pt { width: 22px; height: 22px; font-size: 12px; }
+.lbl .v { color: var(--k); }
+.lbl .p { color: var(--p); }
+.lbl.hl { border-color: var(--e); box-shadow: 0 0 0 3px rgba(255, 241, 201, .25), 0 0 24px rgba(255, 241, 201, .35); }
+.tag { position: absolute; left: 0; top: 0; font: 600 11px var(--f-mono); letter-spacing: .06em; padding: 2px 6px; border-radius: 4px; white-space: nowrap; will-change: transform; }
+.tag.e { color: var(--e); }
+.tag.h { color: var(--p); }
+.tag.d { color: var(--muted); }
+
+.hint { position: absolute; right: 16px; bottom: 16px; font-size: 12px; color: var(--muted); pointer-events: none; }
+
+/* Phones and narrow windows: the scene on top, panels flow underneath */
+@media (max-width: 860px) {
+  html, body { height: auto; }
+  body { overflow: auto; }
+  .app { height: auto; display: flex; flex-direction: column; gap: 14px; padding-inline: 16px; padding-block: 16px; }
+  .overlay { display: contents; }
+  header { order: 0; max-width: none; justify-self: stretch; }
+  #view { order: 1; position: relative; inset: auto; height: 62svh; min-height: 340px; border-radius: 14px; border: 1px solid var(--line); }
+  .tour { order: 2; width: auto; }
+  .energy { order: 3; width: auto; }
+  .controls { order: 4; max-height: none; }
+  .hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stack span { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="view">
+    <div class="labels" id="labels"></div>
+    <div class="hint">Arrastra para girar · rueda o pellizco para acercar</div>
+  </div>
+
+  <div class="overlay">
+    <header class="card">
+      <p class="eyebrow">Física de fluidos · Tubo de Venturi</p>
+      <h1>Teorema de Bernoulli</h1>
+      <div class="eq" aria-label="P más un medio de rho v al cuadrado más rho g z igual a constante">
+        <span class="t tP">P</span><span class="op">+</span>
+        <span class="t tK">½ρv²</span><span class="op">+</span>
+        <span class="t tZ">ρgz</span><span class="op">=</span>
+        <span>constante</span>
+      </div>
+      <div class="eq-key">
+        <span><b style="color:var(--p)">P</b> presión</span>
+        <span><b style="color:var(--k)">½ρv²</b> energía de movimiento</span>
+        <span><b style="color:var(--z)">ρgz</b> energía de altura</span>
+      </div>
+    </header>
+
+    <section class="card tour" id="tour" aria-live="polite">
+      <div class="step" id="tStep">Paso 1 de 5</div>
+      <h3 id="tTitle"></h3>
+      <p id="tText"></p>
+      <div class="btns">
+        <button id="tPrev" type="button">Anterior</button>
+        <button id="tNext" type="button" class="primary">Siguiente</button>
+        <button id="tClose" type="button">Cerrar guía</button>
+      </div>
+    </section>
+
+    <section class="card energy" aria-label="Balance de energía en los puntos A, B y C">
+      <h2>Energía por unidad de volumen (kPa)</h2>
+      <div id="rows"></div>
+      <p class="warn" id="warn" hidden></p>
+    </section>
+
+    <aside class="card controls" aria-label="Controles">
+      <h2>Experimenta</h2>
+      <div class="slider">
+        <div class="row"><label for="sQ">Caudal Q</label><output id="oQ"></output></div>
+        <input type="range" id="sQ" min="2" max="12" step="0.5" value="10">
+        <small>Litros de agua que pasan por el tubo cada segundo.</small>
+      </div>
+      <div class="slider">
+        <div class="row"><label for="sD">Diámetro en B</label><output id="oD"></output></div>
+        <input type="range" id="sD" min="3.5" max="9.5" step="0.1" value="4.5">
+        <small>El tubo mide 10 cm en A y C. Estrecha la garganta y mira el manómetro de B.</small>
+      </div>
+      <div class="slider">
+        <div class="row"><label for="sH">Desnivel de C</label><output id="oH"></output></div>
+        <input type="range" id="sH" min="0" max="4" step="0.1" value="2">
+        <small>Cuánto más alta está la salida respecto a la entrada.</small>
+      </div>
+      <div class="slider">
+        <div class="row"><label for="sR">Ritmo de la animación</label><output id="oR"></output></div>
+        <input type="range" id="sR" min="0.1" max="2" step="0.05" value="1">
+      </div>
+
+      <div class="toggles">
+        <label><input type="checkbox" id="cPart" checked> Partículas</label>
+        <label><input type="checkbox" id="cStream" checked> Líneas de corriente</label>
+        <label><input type="checkbox" id="cMano" checked> Manómetros</label>
+        <label><input type="checkbox" id="cLines" checked> Líneas de energía</label>
+      </div>
+
+      <div class="btns">
+        <button type="button" id="bPause">Pausar</button>
+        <button type="button" id="bTour" class="primary">Recorrido guiado</button>
+      </div>
+
+      <div>
+        <h2 style="margin-bottom:8px">Vistas</h2>
+        <div class="btns">
+          <button type="button" data-view="general">General</button>
+          <button type="button" data-view="throat">Garganta</button>
+          <button type="button" data-view="front">Manómetros</button>
+          <button type="button" data-view="rise">Subida</button>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div>
+          <div class="name">Color de las partículas: velocidad</div>
+          <div class="bar" id="lgV"></div>
+          <div class="ends"><span id="lgV0"></span><span id="lgV1"></span></div>
+        </div>
+        <div>
+          <div class="name">Color del tubo: presión</div>
+          <div class="bar" id="lgP"></div>
+          <div class="ends"><span id="lgP0"></span><span id="lgP1"></span></div>
+        </div>
+      </div>
+
+      <p class="note">En cada punto hay dos tubitos. El <b style="color:var(--p)">piezómetro</b> (recto) sube hasta la presión del agua. El <b style="color:var(--k)">tubo de Pitot</b> (con la punta mirando contra la corriente) frena el agua y suma su energía de movimiento: siempre llega a la línea de energía. Agua ideal: incompresible y sin rozamiento. Alturas en escala real; el grosor del tubo está exagerado.</p>
+    </aside>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Physics ---------- */
+  const RHO = 1000, G = 9.81;      // agua, gravedad
+  const R1 = 0.05;                 // radio en A y C (m) → diámetro 10 cm
+  const SR = 14;                   // escala del radio (exagerado) en unidades de escena por metro
+  const SH = 0.7;                  // escala vertical (alturas y columnas) en unidades por metro
+  const Z0 = 1.5;                  // altura del eje en A sobre el nivel de referencia (m)
+  const P1 = 50000;                // presión manométrica en A (Pa)
+  const X0 = -12, X1 = 12, NS = 600;
+  const PTS = [
+    { id: "A", x: -9 },
+    { id: "B", x: 0 },
+    { id: "C", x: 10.2 }
+  ];
+  const state = { Q: 10, d: 4.5, H: 2, rate: 1, paused: false };
+  const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const clamp01 = t => Math.min(1, Math.max(0, t));
+  const smooth = t => { t = clamp01(t); return t * t * (3 - 2 * t); };
+  const rPhys = x => { const rT = state.d / 200; const k = smooth((Math.abs(x) - 1.2) / 3.3); return rT + (R1 - rT) * k; };
+  const zPhys = x => Z0 + state.H * smooth((x - 5) / 4);
+
+  function phys(x) {
+    const Q = state.Q / 1000;
+    const r = rPhys(x), z = zPhys(x);
+    const v = Q / (Math.PI * r * r);
+    const vA = Q / (Math.PI * R1 * R1);
+    const P = P1 + 0.5 * RHO * (vA * vA - v * v) + RHO * G * (Z0 - z);
+    return { r, z, v, P, A: Math.PI * r * r };
+  }
+
+  const T = { r: new Float32Array(NS + 1), y: new Float32Array(NS + 1), phi: new Float32Array(NS + 1), v: new Float32Array(NS + 1), P: new Float32Array(NS + 1) };
+  let vMin, vMax, PMin, PMax, EH;
+
+  function rebuildTables() {
+    vMin = Infinity; vMax = -Infinity; PMin = Infinity; PMax = -Infinity;
+    for (let i = 0; i <= NS; i++) {
+      const x = X0 + (X1 - X0) * i / NS;
+      const s = phys(x);
+      T.r[i] = s.r * SR; T.y[i] = s.z * SH; T.v[i] = s.v; T.P[i] = s.P;
+      vMin = Math.min(vMin, s.v); vMax = Math.max(vMax, s.v);
+      PMin = Math.min(PMin, s.P); PMax = Math.max(PMax, s.P);
+    }
+    const dx = (X1 - X0) / NS;
+    for (let i = 0; i <= NS; i++) {
+      const a = T.y[Math.max(0, i - 1)], b = T.y[Math.min(NS, i + 1)];
+      T.phi[i] = Math.atan((b - a) / (2 * dx));
+    }
+    const a = phys(PTS[0].x);
+    EH = a.z + a.P / (RHO * G) + a.v * a.v / (2 * G); // altura de energía (m)
+  }
+  function S(arr, x) {
+    let f = (x - X0) / (X1 - X0) * NS;
+    if (f < 0) f = 0; if (f > NS - 1e-6) f = NS - 1e-6;
+    const i = f | 0, t = f - i;
+    return arr[i] + (arr[i + 1] - arr[i]) * t;
+  }
+
+  /* ---------- Colour ramps ---------- */
+  function makeLUT(stops) {
+    const lut = new Float32Array(256 * 3), c = new THREE.Color(), a = new THREE.Color(), b = new THREE.Color();
+    for (let i = 0; i < 256; i++) {
+      const t = i / 255;
+      let k = 0; while (k < stops.length - 2 && t > stops[k + 1][0]) k++;
+      const [t0, c0] = stops[k], [t1, c1] = stops[k + 1];
+      a.set(c0); b.set(c1); c.copy(a).lerp(b, clamp01((t - t0) / (t1 - t0)));
+      lut[i * 3] = c.r; lut[i * 3 + 1] = c.g; lut[i * 3 + 2] = c.b;
+    }
+    return lut;
+  }
+  const LUT_V = makeLUT([[0, "#3557ff"], [0.3, "#b44dff"], [0.65, "#ff6a2a"], [1, "#ffe680"]]);
+  const LUT_P = makeLUT([[0, "#7b2cff"], [0.5, "#3d7bff"], [1, "#14e0ff"]]);
+  const lutIdx = t => (Math.round(clamp01(t) * 255) * 3);
+
+  /* ---------- Renderer & scene ---------- */
+  const view = document.getElementById("view");
+  const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.95;
+  view.insertBefore(renderer.domElement, view.firstChild);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color("#060a16");
+  scene.fog = new THREE.FogExp2("#060a16", 0.018);
+
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+  camera.position.set(-4, 7, 23);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 3.2, 0);
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.minDistance = 4;
+  controls.maxDistance = 45;
+  controls.maxPolarAngle = Math.PI * 0.62;
+
+  scene.add(new THREE.HemisphereLight("#9fb7ff", "#120a24", 0.7));
+  const key = new THREE.DirectionalLight("#ffffff", 1.1); key.position.set(6, 14, 10); scene.add(key);
+  const rimC = new THREE.PointLight("#2bd6ff", 1.4, 30); rimC.position.set(-8, 4, -6); scene.add(rimC);
+  const rimO = new THREE.PointLight("#ff8a3d", 1.2, 25); rimO.position.set(2, 3, 5); scene.add(rimO);
+
+  // Datum floor (z = 0)
+  const grid = new THREE.GridHelper(60, 60, "#3a4a8a", "#1a2450");
+  grid.material.transparent = true; grid.material.opacity = 0.45;
+  scene.add(grid);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(30, 64), new THREE.MeshBasicMaterial({ color: "#0a1028", transparent: true, opacity: 0.6 }));
+  floor.rotation.x = -Math.PI / 2; floor.position.y = -0.01; scene.add(floor);
+
+  // Background dust for depth
+  (function () {
+    const n = 600, p = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      const r = 30 + Math.random() * 40, a = Math.random() * Math.PI * 2;
+      p[i * 3] = Math.cos(a) * r; p[i * 3 + 1] = Math.random() * 30 - 2; p[i * 3 + 2] = Math.sin(a) * r;
+    }
+    const g = new THREE.BufferGeometry(); g.setAttribute("position", new THREE.BufferAttribute(p, 3));
+    scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: "#6f86ff", size: 0.12, transparent: true, opacity: 0.6 })));
+  })();
+
+  /* ---------- Glass tube ---------- */
+  const NX = 260, NA = 56;
+  const tubeGeo = new THREE.BufferGeometry();
+  const tPos = new Float32Array((NX + 1) * (NA + 1) * 3);
+  const tCol = new Float32Array((NX + 1) * (NA + 1) * 3);
+  const tIdx = [];
+  for (let i = 0; i < NX; i++) for (let j = 0; j < NA; j++) {
+    const a = i * (NA + 1) + j, b = a + NA + 1;
+    tIdx.push(a, b, a + 1, b, b + 1, a + 1);
+  }
+  tubeGeo.setIndex(tIdx);
+  tubeGeo.setAttribute("position", new THREE.BufferAttribute(tPos, 3));
+  tubeGeo.setAttribute("color", new THREE.BufferAttribute(tCol, 3));
+  const tubeMat = new THREE.MeshPhysicalMaterial({
+    vertexColors: true, transparent: true, opacity: 0.24, roughness: 0.12, metalness: 0.1,
+    clearcoat: 1, clearcoatRoughness: 0.1, side: THREE.DoubleSide, depthWrite: false,
+    emissive: new THREE.Color("#0b1a40"), emissiveIntensity: 0.25
+  });
+  const tube = new THREE.Mesh(tubeGeo, tubeMat);
+  tube.renderOrder = 2;
+  scene.add(tube);
+
+  const NRING = 34;
+  const ringGeo = new THREE.BufferGeometry();
+  const ringPos = new Float32Array(NRING * NA * 2 * 3);
+  ringGeo.setAttribute("position", new THREE.BufferAttribute(ringPos, 3));
+  const rings = new THREE.LineSegments(ringGeo, new THREE.LineBasicMaterial({ color: "#bcd0ff", transparent: true, opacity: 0.22 }));
+  scene.add(rings);
+
+  function ringPoint(x, th, scale, out, o) {
+    const r = S(T.r, x) * scale, y = S(T.y, x), ph = S(T.phi, x);
+    const s = Math.sin(ph), c = Math.cos(ph), ct = Math.cos(th);
+    out[o] = x - s * r * ct; out[o + 1] = y + c * r * ct; out[o + 2] = r * Math.sin(th);
+  }
+  function updateTube() {
+    for (let i = 0; i <= NX; i++) {
+      const x = X0 + (X1 - X0) * i / NX;
+      const li = lutIdx((S(T.P, x) - PMin) / ((PMax - PMin) || 1));
+      for (let j = 0; j <= NA; j++) {
+        const o = (i * (NA + 1) + j) * 3;
+        ringPoint(x, j / NA * Math.PI * 2, 1, tPos, o);
+        tCol[o] = LUT_P[li]; tCol[o + 1] = LUT_P[li + 1]; tCol[o + 2] = LUT_P[li + 2];
+      }
+    }
+    tubeGeo.attributes.position.needsUpdate = true;
+    tubeGeo.attributes.color.needsUpdate = true;
+    tubeGeo.computeVertexNormals();
+    tubeGeo.computeBoundingSphere();
+    let o = 0;
+    for (let k = 0; k < NRING; k++) {
+      const x = X0 + 0.05 + (X1 - X0 - 0.1) * k / (NRING - 1);
+      for (let j = 0; j < NA; j++) {
+        ringPoint(x, j / NA * Math.PI * 2, 1.004, ringPos, o); o += 3;
+        ringPoint(x, (j + 1) / NA * Math.PI * 2, 1.004, ringPos, o); o += 3;
+      }
+    }
+    ringGeo.attributes.position.needsUpdate = true;
+    ringGeo.computeBoundingSphere();
+  }
+
+  /* ---------- Particles ---------- */
+  const NP = window.innerWidth < 860 ? 2600 : 4600;
+  const pX = new Float32Array(NP), pR = new Float32Array(NP), pT = new Float32Array(NP);
+  const pPos = new Float32Array(NP * 3), pCol = new Float32Array(NP * 3), pSize = new Float32Array(NP);
+  function seed(i, x) { pX[i] = x; pR[i] = Math.sqrt(Math.random()) * 0.88; pT[i] = Math.random() * Math.PI * 2; }
+  for (let i = 0; i < NP; i++) { seed(i, X0 + Math.random() * (X1 - X0)); pSize[i] = 0.6 + Math.random() * 0.9; }
+  const partGeo = new THREE.BufferGeometry();
+  partGeo.setAttribute("position", new THREE.BufferAttribute(pPos, 3));
+  partGeo.setAttribute("aColor", new THREE.BufferAttribute(pCol, 3));
+  partGeo.setAttribute("aSize", new THREE.BufferAttribute(pSize, 1));
+  const partMat = new THREE.ShaderMaterial({
+    uniforms: { uScale: { value: 300 } },
+    vertexShader: [
+      "attribute vec3 aColor; attribute float aSize; uniform float uScale; varying vec3 vC;",
+      "void main(){ vC = aColor; vec4 mv = modelViewMatrix * vec4(position, 1.0);",
+      "gl_PointSize = aSize * uScale / -mv.z; gl_Position = projectionMatrix * mv; }"
+    ].join("\n"),
+    fragmentShader: [
+      "varying vec3 vC;",
+      "void main(){ float d = length(gl_PointCoord - 0.5); if (d > 0.5) discard;",
+      "float core = smoothstep(0.5, 0.0, d); gl_FragColor = vec4(vC * (0.35 + 0.55 * core), core * 0.85); }"
+    ].join("\n"),
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending
+  });
+  const particles = new THREE.Points(partGeo, partMat);
+  particles.frustumCulled = false;
+  particles.renderOrder = 3;
+  scene.add(particles);
+
+  const SPEED = 1.6; // unidades de escena por (m/s)
+  function updateParticles(dt) {
+    const span = X1 - X0, dv = (vMax - vMin) || 1;
+    for (let i = 0; i < NP; i++) {
+      let x = pX[i];
+      const v = S(T.v, x);
+      if (dt > 0) {
+        x += v * SPEED * state.rate * dt * Math.cos(S(T.phi, x));
+        if (x > X1) { seed(i, x - span); x = pX[i]; } else pX[i] = x;
+      }
+      const r = S(T.r, x) * pR[i], y = S(T.y, x), ph = S(T.phi, x);
+      const s = Math.sin(ph), c = Math.cos(ph), ct = Math.cos(pT[i]);
+      const o = i * 3;
+      pPos[o] = x - s * r * ct; pPos[o + 1] = y + c * r * ct; pPos[o + 2] = r * Math.sin(pT[i]);
+      const li = lutIdx((S(T.v, x) - vMin) / dv);
+      pCol[o] = LUT_V[li]; pCol[o + 1] = LUT_V[li + 1]; pCol[o + 2] = LUT_V[li + 2];
+    }
+    partGeo.attributes.position.needsUpdate = true;
+    partGeo.attributes.aColor.needsUpdate = true;
+  }
+
+  /* ---------- Streamlines ---------- */
+  const streams = new THREE.Group(); scene.add(streams);
+  const NSTREAM = 10, NSP = 240;
+  const streamDefs = [];
+  for (let k = 0; k < NSTREAM; k++) {
+    const rf = k === 0 ? 0 : 0.62, th = k === 0 ? 0 : (k - 1) / (NSTREAM - 1) * Math.PI * 2;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(new Float32Array(NSP * 3), 3));
+    g.setAttribute("color", new THREE.BufferAttribute(new Float32Array(NSP * 3), 3));
+    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.75 }));
+    streams.add(line); streamDefs.push({ g, rf, th });
+  }
+  function updateStreams() {
+    const dv = (vMax - vMin) || 1;
+    streamDefs.forEach(({ g, rf, th }) => {
+      const p = g.attributes.position.array, c = g.attributes.color.array;
+      for (let i = 0; i < NSP; i++) {
+        const x = X0 + (X1 - X0) * i / (NSP - 1);
+        const r = S(T.r, x) * rf, y = S(T.y, x), ph = S(T.phi, x);
+        p[i * 3] = x - Math.sin(ph) * r * Math.cos(th); p[i * 3 + 1] = y + Math.cos(ph) * r * Math.cos(th); p[i * 3 + 2] = r * Math.sin(th);
+        const li = lutIdx((S(T.v, x) - vMin) / dv);
+        c[i * 3] = LUT_V[li]; c[i * 3 + 1] = LUT_V[li + 1]; c[i * 3 + 2] = LUT_V[li + 2];
+      }
+      g.attributes.position.needsUpdate = true; g.attributes.color.needsUpdate = true; g.computeBoundingSphere();
+    });
+  }
+
+  /* ---------- Energy line & hydraulic grade line ---------- */
+  const eGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(X0, 0, 0), new THREE.Vector3(X1, 0, 0)]);
+  const eLine = new THREE.Line(eGeo, new THREE.LineDashedMaterial({ color: "#fff1c9", dashSize: 0.45, gapSize: 0.25 }));
+  scene.add(eLine);
+  const NH = 300;
+  const hGeo = new THREE.BufferGeometry();
+  hGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(NH * 3), 3));
+  const hLine = new THREE.Line(hGeo, new THREE.LineBasicMaterial({ color: "#2bd6ff", transparent: true, opacity: 0.9 }));
+  scene.add(hLine);
+  function updateLines() {
+    eLine.position.y = EH * SH;
+    eLine.computeLineDistances();
+    const p = hGeo.attributes.position.array;
+    for (let i = 0; i < NH; i++) {
+      const x = X0 + (X1 - X0) * i / (NH - 1);
+      p[i * 3] = x; p[i * 3 + 1] = S(T.y, x) + S(T.P, x) / (RHO * G) * SH; p[i * 3 + 2] = 0;
+    }
+    hGeo.attributes.position.needsUpdate = true; hGeo.computeBoundingSphere();
+  }
+
+  /* ---------- Manometers (piezometer + Pitot) ---------- */
+  const glassMat = new THREE.MeshPhysicalMaterial({ color: "#cfe0ff", transparent: true, opacity: 0.12, roughness: 0.05, clearcoat: 1, side: THREE.DoubleSide, depthWrite: false });
+  const liqP = new THREE.MeshStandardMaterial({ color: "#2bd6ff", emissive: "#0fb4e6", emissiveIntensity: 0.45, roughness: 0.3 });
+  const liqK = new THREE.MeshStandardMaterial({ color: "#ff8a3d", emissive: "#ff6a1a", emissiveIntensity: 0.5, roughness: 0.3 });
+  const liqZ = new THREE.MeshStandardMaterial({ color: "#4ee08a", emissive: "#22c26a", emissiveIntensity: 0.4, roughness: 0.4, transparent: true, opacity: 0.85 });
+  const cylGeo = new THREE.CylinderGeometry(1, 1, 1, 20, 1, true); cylGeo.translate(0, 0.5, 0);
+  const solidGeo = new THREE.CylinderGeometry(1, 1, 1, 20, 1, false); solidGeo.translate(0, 0.5, 0);
+  function cyl(geo, mat, rad) { const m = new THREE.Mesh(geo, mat); m.scale.set(rad, 1, rad); return m; }
+  function setSpan(m, y0, y1) { const h = Math.max(0.0001, y1 - y0); m.position.y = y0; m.scale.y = h; m.visible = y1 > y0 + 0.001; }
+
+  const manos = new THREE.Group(); scene.add(manos);
+  const zBars = new THREE.Group(); scene.add(zBars);
+  PTS.forEach(pt => {
+    const g = new THREE.Group();
+    pt.glassPz = cyl(cylGeo, glassMat, 0.15); pt.glassPz.position.x = pt.x - 0.45;
+    pt.liqPz = cyl(solidGeo, liqP, 0.1); pt.liqPz.position.x = pt.x - 0.45;
+    pt.glassPt = cyl(cylGeo, glassMat, 0.15); pt.glassPt.position.x = pt.x + 0.45;
+    pt.liqPtP = cyl(solidGeo, liqP, 0.1); pt.liqPtP.position.x = pt.x + 0.45;
+    pt.liqPtK = cyl(solidGeo, liqK, 0.1); pt.liqPtK.position.x = pt.x + 0.45;
+    pt.tip = cyl(cylGeo, glassMat, 0.15); pt.tip.rotation.z = Math.PI / 2;
+    pt.tipLiq = cyl(solidGeo, liqK, 0.1); pt.tipLiq.rotation.z = Math.PI / 2;
+    pt.meniscus = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), new THREE.MeshBasicMaterial({ color: "#bff3ff" }));
+    pt.meniscusK = new THREE.Mesh(new THREE.SphereGeometry(0.16, 16, 12), new THREE.MeshBasicMaterial({ color: "#ffd2a8" }));
+    g.add(pt.glassPz, pt.liqPz, pt.glassPt, pt.liqPtP, pt.liqPtK, pt.tip, pt.tipLiq, pt.meniscus, pt.meniscusK);
+    manos.add(g);
+    pt.zBar = cyl(solidGeo, liqZ, 0.09);
+    pt.zBar.position.set(pt.x, 0, -(R1 * SR) - 0.55);
+    pt.zCap = new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 10), new THREE.MeshBasicMaterial({ color: "#a9ffcb" }));
+    pt.zCap.position.set(pt.x, 0, -(R1 * SR) - 0.55);
+    zBars.add(pt.zBar, pt.zCap);
+  });
+  let glassTop = 0;
+  function updateManos() {
+    glassTop = EH * SH + 0.9;
+    PTS.forEach(pt => {
+      const xa = pt.x - 0.45, xb = pt.x + 0.45;
+      const ya = S(T.y, xa), yb = S(T.y, xb);
+      const wa = ya + S(T.r, xa) * 0.97, wb = yb + S(T.r, xb) * 0.97;
+      const pa = phys(xa), pb = phys(xb);
+      const topPz = ya + pa.P / (RHO * G) * SH;
+      const topPtP = yb + pb.P / (RHO * G) * SH;
+      const topE = EH * SH;
+      setSpan(pt.glassPz, wa, glassTop);
+      setSpan(pt.liqPz, wa, topPz);
+      pt.meniscus.position.set(xa, topPz, 0); pt.meniscus.visible = topPz > wa;
+      setSpan(pt.glassPt, yb, glassTop);
+      setSpan(pt.liqPtP, wb, topPtP);
+      setSpan(pt.liqPtK, Math.max(wb, topPtP), topE);
+      pt.meniscusK.position.set(xb, topE, 0);
+      // Pitot tip: horizontal tube from the vertical leg pointing upstream (−x)
+      pt.tip.position.set(xb + 0.15, yb, 0); pt.tip.scale.y = 0.75;
+      pt.tipLiq.position.set(xb + 0.15, yb, 0); pt.tipLiq.scale.y = 0.75;
+      const yc = S(T.y, pt.x);
+      setSpan(pt.zBar, 0, yc);
+      pt.zCap.position.y = yc;
+      pt.top = glassTop;
+    });
+  }
+
+  /* ---------- Post-processing ---------- */
+  let composer = null, bloom = null;
+  try {
+    if (THREE.EffectComposer && THREE.UnrealBloomPass) {
+      composer = new THREE.EffectComposer(renderer);
+      composer.addPass(new THREE.RenderPass(scene, camera));
+      bloom = new THREE.UnrealBloomPass(new THREE.Vector2(512, 512), 0.55, 0.4, 0.8);
+      composer.addPass(bloom);
+    }
+  } catch (e) { composer = null; }
+
+  /* ---------- HTML labels ---------- */
+  const labelsEl = document.getElementById("labels");
+  PTS.forEach(pt => {
+    const el = document.createElement("div");
+    el.className = "lbl";
+    el.innerHTML = '<span class="pt">' + pt.id + '</span><span class="v"></span><span class="p"></span>';
+    labelsEl.appendChild(el);
+    pt.el = el; pt.elV = el.querySelector(".v"); pt.elP = el.querySelector(".p");
+  });
+  function tag(cls, text) { const el = document.createElement("div"); el.className = "tag " + cls; el.textContent = text; labelsEl.appendChild(el); return el; }
+  const tagE = tag("e", "Línea de energía");
+  const tagH = tag("h", "Línea piezométrica");
+  const tagD = tag("d", "Nivel de referencia · z = 0");
+  const tmpV = new THREE.Vector3();
+  let vw = 1, vh = 1;
+  function place(el, x, y, z, ax, ay) {
+    tmpV.set(x, y, z).project(camera);
+    if (tmpV.z > 1 || tmpV.z < -1) { el.style.visibility = "hidden"; return; }
+    el.style.visibility = "visible";
+    const sx = (tmpV.x * 0.5 + 0.5) * vw, sy = (-tmpV.y * 0.5 + 0.5) * vh;
+    el.style.transform = "translate(" + sx.toFixed(1) + "px," + sy.toFixed(1) + "px) translate(" + ax + "," + ay + ")";
+  }
+  function placeLabels() {
+    const showM = manos.visible;
+    PTS.forEach(pt => place(pt.el, pt.x, (showM ? pt.top : S(T.y, pt.x) + S(T.r, pt.x)) + 0.35, 0, "-50%", "-100%"));
+    tagE.hidden = tagH.hidden = !eLine.visible;
+    if (eLine.visible) {
+      place(tagE, X1 - 0.3, EH * SH + 0.15, 0, "-100%", "-100%");
+      place(tagH, X1 - 0.3, S(T.y, X1 - 0.3) + S(T.P, X1 - 0.3) / (RHO * G) * SH - 0.15, 0, "-100%", "0%");
+    }
+    place(tagD, X0 + 4, 0, 3, "0%", "-120%");
+  }
+
+  /* ---------- HUD ---------- */
+  const nf = (n, d) => n.toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const rowsEl = document.getElementById("rows");
+  PTS.forEach(pt => {
+    const row = document.createElement("div");
+    row.className = "erow";
+    row.innerHTML = '<span class="pt">' + pt.id + '</span><div class="stack"><span class="sP"></span><span class="sK"></span><span class="sZ"></span></div><span class="tot"></span><div class="emeta"></div>';
+    rowsEl.appendChild(row);
+    pt.bP = row.querySelector(".sP"); pt.bK = row.querySelector(".sK"); pt.bZ = row.querySelector(".sZ");
+    pt.tot = row.querySelector(".tot"); pt.meta = row.querySelector(".emeta");
+  });
+  const warnEl = document.getElementById("warn");
+  function updateHUD() {
+    const vals = PTS.map(pt => { const s = phys(pt.x); return { pt, s, P: s.P / 1000, K: 0.5 * RHO * s.v * s.v / 1000, Z: RHO * G * s.z / 1000 }; });
+    const total = vals[0].P + vals[0].K + vals[0].Z;
+    vals.forEach(({ pt, s, P, K, Z }) => {
+      const w = x => (Math.max(0, x) / total * 100).toFixed(2) + "%";
+      pt.bP.style.width = w(P); pt.bK.style.width = w(K); pt.bZ.style.width = w(Z);
+      pt.bP.textContent = P / total > 0.12 ? nf(P, 1) : "";
+      pt.bK.textContent = K / total > 0.12 ? nf(K, 1) : "";
+      pt.bZ.textContent = Z / total > 0.12 ? nf(Z, 1) : "";
+      pt.bP.title = "P = " + nf(P, 1) + " kPa"; pt.bK.title = "½ρv² = " + nf(K, 1) + " kPa"; pt.bZ.title = "ρgz = " + nf(Z, 1) + " kPa";
+      pt.tot.textContent = "= " + nf(P + K + Z, 1);
+      pt.meta.innerHTML = 'Área ' + nf(s.A * 1e4, 1) + ' cm² · <span style="color:var(--k)">v ' + nf(s.v, 2) + ' m/s</span> · <span style="color:var(--p)">P ' + nf(P, 1) + '</span> · <span style="color:var(--k)">½ρv² ' + nf(K, 1) + '</span> · <span style="color:var(--z)">ρgz ' + nf(Z, 1) + '</span>';
+      pt.elV.textContent = "v " + nf(s.v, 2) + " m/s";
+      pt.elP.textContent = "P " + nf(P, 1) + " kPa";
+    });
+    const neg = vals.filter(v => v.P < 0).map(v => v.pt.id);
+    warnEl.hidden = !neg.length;
+    if (neg.length) warnEl.textContent = "Presión negativa en " + neg.join(", ") + ": en un tubo real el agua herviría y formaría burbujas (cavitación). Baja el caudal o ensancha la garganta.";
+    document.getElementById("lgV0").textContent = nf(vMin, 2) + " m/s";
+    document.getElementById("lgV1").textContent = nf(vMax, 2) + " m/s";
+    document.getElementById("lgP0").textContent = nf(PMin / 1000, 1) + " kPa";
+    document.getElementById("lgP1").textContent = nf(PMax / 1000, 1) + " kPa";
+  }
+
+  function rebuildAll() {
+    rebuildTables(); updateTube(); updateStreams(); updateLines(); updateManos(); updateHUD(); updateParticles(0);
+  }
+
+  /* ---------- Controls ---------- */
+  const $ = id => document.getElementById(id);
+  function bindSlider(id, out, key, fmt) {
+    const s = $(id), o = $(out);
+    const apply = () => { state[key] = parseFloat(s.value); o.textContent = fmt(state[key]); if (key !== "rate") rebuildAll(); };
+    s.addEventListener("input", apply); apply();
+  }
+  bindSlider("sQ", "oQ", "Q", v => nf(v, 1) + " L/s");
+  bindSlider("sD", "oD", "d", v => nf(v, 1) + " cm");
+  bindSlider("sH", "oH", "H", v => nf(v, 1) + " m");
+  bindSlider("sR", "oR", "rate", v => "× " + nf(v, 2));
+  $("cPart").addEventListener("change", e => { particles.visible = e.target.checked; });
+  $("cStream").addEventListener("change", e => { streams.visible = e.target.checked; });
+  $("cMano").addEventListener("change", e => { manos.visible = e.target.checked; zBars.visible = e.target.checked; });
+  $("cLines").addEventListener("change", e => { eLine.visible = hLine.visible = e.target.checked; });
+  $("bPause").addEventListener("click", e => { state.paused = !state.paused; e.target.textContent = state.paused ? "Reanudar" : "Pausar"; });
+
+  /* ---------- Camera moves ---------- */
+  const VIEWS = {
+    general: { p: [-4, 7, 23], t: [0, 3.2, 0] },
+    throat: { p: [-3.5, 3.2, 7.5], t: [0, 1.2, 0] },
+    front: { p: [0, 4.2, 20], t: [0, 3.6, 0] },
+    rise: { p: [13, 4.5, 11], t: [6.5, 2.6, 0] },
+    pressure: { p: [-4.5, 5, 14], t: [-4.5, 3.6, 0] },
+    total: { p: [1, 4.5, 21], t: [0.5, 3.6, 0] }
+  };
+  let fly = null;
+  function flyTo(name) {
+    const v = VIEWS[name]; if (!v) return;
+    const to = { p: new THREE.Vector3(...v.p), t: new THREE.Vector3(...v.t) };
+    if (vw / vh < 1.1) to.p.sub(to.t).multiplyScalar(1.45).add(to.t); // portrait screens: step back
+    if (reduceMotion) { camera.position.copy(to.p); controls.target.copy(to.t); return; }
+    fly = { fp: camera.position.clone(), ft: controls.target.clone(), to, t: 0, dur: 1.6 };
+  }
+  document.querySelectorAll("[data-view]").forEach(b => b.addEventListener("click", () => flyTo(b.dataset.view)));
+
+  /* ---------- Guided tour ---------- */
+  const STEPS = [
+    { title: "Un tubo y agua ideal", view: "general", hl: [],
+      text: "El agua entra por la izquierda y recorre el tubo sin rozamiento. Cada punto brillante es una gotita de agua. Vigilamos tres lugares: A (entrada ancha), B (garganta estrecha) y C (salida ancha pero más alta)." },
+    { title: "Si el tubo se estrecha, el agua acelera", view: "throat", hl: ["B"],
+      text: "Cada segundo pasa el mismo caudal por todas las secciones: Q = A·v. En B el área es menor, así que la velocidad tiene que ser mayor. Mira cómo las gotitas pasan de azul a naranja y amarillo al entrar en la garganta." },
+    { title: "Más velocidad, menos presión", view: "pressure", hl: ["A", "B"],
+      text: "La energía total no cambia. Si en B el agua gana energía de movimiento (½ρv², naranja), tiene que perder presión (P, cian). Compara los tubitos rectos: el agua sube mucho menos en el de B que en el de A." },
+    { title: "Subir también se paga con presión", view: "rise", hl: ["C"],
+      text: "En C el tubo vuelve a medir 10 cm, así que la velocidad es la misma que en A. Pero C está más alto y gana energía de altura (ρgz, verde). Esa energía sale de la presión. Mueve el control «Desnivel de C» y observa su manómetro." },
+    { title: "La suma siempre es la misma", view: "total", hl: ["A", "B", "C"],
+      text: "Presión + energía de movimiento + energía de altura da el mismo total en A, B y C: las tres barras de abajo miden igual. El tubo de Pitot (punta contra la corriente) siempre llega a la línea discontinua de energía. Cambia el caudal o el diámetro y compruébalo." }
+  ];
+  let step = 0;
+  const tourEl = $("tour");
+  function showStep(i) {
+    step = Math.max(0, Math.min(STEPS.length - 1, i));
+    const s = STEPS[step];
+    $("tStep").textContent = "Paso " + (step + 1) + " de " + STEPS.length;
+    $("tTitle").textContent = s.title;
+    $("tText").textContent = s.text;
+    $("tPrev").disabled = step === 0;
+    $("tNext").textContent = step === STEPS.length - 1 ? "Terminar" : "Siguiente";
+    PTS.forEach(pt => pt.el.classList.toggle("hl", s.hl.includes(pt.id)));
+    flyTo(s.view);
+  }
+  function closeTour() { tourEl.hidden = true; PTS.forEach(pt => pt.el.classList.remove("hl")); }
+  $("tPrev").addEventListener("click", () => showStep(step - 1));
+  $("tNext").addEventListener("click", () => { if (step === STEPS.length - 1) { closeTour(); flyTo("general"); } else showStep(step + 1); });
+  $("tClose").addEventListener("click", closeTour);
+  $("bTour").addEventListener("click", () => { tourEl.hidden = false; showStep(0); });
+
+  /* ---------- Resize ---------- */
+  function resize() {
+    vw = view.clientWidth || 1; vh = view.clientHeight || 1;
+    renderer.setSize(vw, vh, false);
+    camera.aspect = vw / vh;
+    camera.fov = vw < 600 ? 58 : 45;
+    // On desktop the panels cover the right and bottom edges: shift the image centre into the free area
+    if (window.innerWidth > 860) camera.setViewOffset(vw, vh, 170, 10, vw, vh); else camera.clearViewOffset();
+    camera.updateProjectionMatrix();
+    const pr = renderer.getPixelRatio();
+    partMat.uniforms.uScale.value = 0.085 * vh * pr / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2));
+    if (composer) { composer.setPixelRatio(pr); composer.setSize(vw, vh); }
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(view); else window.addEventListener("resize", resize);
+
+  /* ---------- Loop ---------- */
+  rebuildAll();
+  resize();
+  showStep(0);
+  const clock = new THREE.Clock();
+  const ease = t => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  function frame() {
+    const dt = Math.min(clock.getDelta(), 0.05);
+    if (fly) {
+      fly.t += dt / fly.dur;
+      const k = ease(Math.min(1, fly.t));
+      camera.position.lerpVectors(fly.fp, fly.to.p, k);
+      controls.target.lerpVectors(fly.ft, fly.to.t, k);
+      if (fly.t >= 1) fly = null;
+    }
+    if (!state.paused && particles.visible) updateParticles(dt);
+    controls.update();
+    if (composer) composer.render(); else renderer.render(scene, camera);
+    placeLabels();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
