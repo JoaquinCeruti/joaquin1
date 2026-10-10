@@ -2,20 +2,40 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Silo bivalva 3D</title>
 <style>
 :root {
   --bg: #dfe6ee;
+  --scene: #dfe6ee;
+  --ground: #b7c2a4;
   --panel: rgba(255, 255, 255, 0.9);
   --line: rgba(20, 30, 50, 0.14);
+  --track: rgba(20, 30, 50, 0.1);
+  --hover: rgba(20, 30, 50, 0.35);
+  --shadow: rgba(20, 30, 50, 0.12);
   --fg: #17202e;
   --muted: #5b6678;
   --accent: #c8955a;
   --btn: #eef2f7;
   --btn-on: #17202e;
+  --btn-on-fg: #ffffff;
+  --lbl-bg: rgba(255, 255, 255, 0.92);
+  --lbl-fg: #17202e;
   color-scheme: light;
 }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #1b222c; --scene: #1b222c; --ground: #39402f;
+  --panel: rgba(28, 35, 46, 0.9); --line: rgba(200, 215, 235, 0.16); --track: rgba(200, 215, 235, 0.14);
+  --hover: rgba(200, 215, 235, 0.4); --shadow: rgba(0, 0, 0, 0.4);
+  --fg: #e6ebf2; --muted: #9aa6b8; --accent: #d9a56a; --btn: #2a3340; --btn-on: #e6ebf2; --btn-on-fg: #17202e;
+  --lbl-bg: rgba(24, 30, 40, 0.92); --lbl-fg: #e6ebf2; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #1b222c; --scene: #1b222c; --ground: #39402f;
+  --panel: rgba(28, 35, 46, 0.9); --line: rgba(200, 215, 235, 0.16); --track: rgba(200, 215, 235, 0.14);
+  --hover: rgba(200, 215, 235, 0.4); --shadow: rgba(0, 0, 0, 0.4);
+  --fg: #e6ebf2; --muted: #9aa6b8; --accent: #d9a56a; --btn: #2a3340; --btn-on: #e6ebf2; --btn-on-fg: #17202e;
+  --lbl-bg: rgba(24, 30, 40, 0.92); --lbl-fg: #e6ebf2; color-scheme: dark; }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
   font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
@@ -23,28 +43,29 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); c
 #labels { position: fixed; inset: 0; pointer-events: none; }
 
 .panel { position: fixed; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
-  box-shadow: 0 6px 24px rgba(20, 30, 50, 0.12); backdrop-filter: blur(6px); }
-#hud { top: 16px; left: 16px; width: 300px; padding: 14px 16px; }
+  box-shadow: 0 6px 24px var(--shadow); backdrop-filter: blur(6px); }
+#hud { top: calc(16px + env(safe-area-inset-top, 0px)); left: 16px; width: 300px; padding: 14px 16px; }
 #hud h1 { font-size: 17px; margin: 0 0 2px; letter-spacing: 0.01em; }
 #hud .sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
 #phase { font-size: 14px; font-weight: 600; min-height: 20px; }
-.bar { height: 6px; background: rgba(20,30,50,0.1); border-radius: 3px; margin: 8px 0 12px; overflow: hidden; }
+.bar { height: 6px; background: var(--track); border-radius: 3px; margin: 8px 0 12px; overflow: hidden; }
 .bar > div { height: 100%; width: 0; background: var(--accent); }
 .btns { display: flex; flex-wrap: wrap; gap: 6px; }
 button { font: inherit; font-size: 13px; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--line);
   background: var(--btn); color: var(--fg); cursor: pointer; }
-button:hover { border-color: rgba(20,30,50,0.35); }
-button.on { background: var(--btn-on); color: #fff; border-color: var(--btn-on); }
+button:hover { border-color: var(--hover); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.on { background: var(--btn-on); color: var(--btn-on-fg); border-color: var(--btn-on); }
 .row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
 .row input { flex: 1; }
 .keys { font-size: 11px; color: var(--muted); margin-top: 10px; }
 
-#legend { left: 16px; bottom: 16px; padding: 10px 14px; font-size: 12px; max-width: 300px; }
+#legend { left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 10px 14px; font-size: 12px; max-width: 300px; }
 #legend .it { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
 #legend i { width: 14px; height: 14px; border-radius: 3px; flex: none; border: 1px solid rgba(0,0,0,0.2); }
 
 .lbl { font-size: 11.5px; line-height: 1.25; padding: 3px 7px; border-radius: 5px; white-space: nowrap;
-  background: rgba(255,255,255,0.92); color: #17202e; border-left: 4px solid; box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  background: var(--lbl-bg); color: var(--lbl-fg); border-left: 4px solid; box-shadow: 0 2px 6px rgba(0,0,0,0.18);
   transform: translateY(-14px); }
 .lbl b { font-weight: 700; }
 
@@ -124,8 +145,8 @@ const labelRenderer = new CSS2DRenderer({ element: document.getElementById('labe
 labelRenderer.setSize(innerWidth, innerHeight);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xdfe6ee);
-scene.fog = new THREE.Fog(0xdfe6ee, 30, 70);
+scene.background = new THREE.Color();
+scene.fog = new THREE.Fog(0xffffff, 30, 70);
 
 const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.05, 200);
 camera.position.set(10.5, 7.2, 12.5);
@@ -148,7 +169,7 @@ sun.shadow.bias = -0.0005;
 scene.add(sun);
 
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200),
-  new THREE.MeshStandardMaterial({ color: 0xb7c2a4, roughness: 1 }));
+  new THREE.MeshStandardMaterial({ roughness: 1 }));
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = -0.3;
 ground.receiveShadow = true;
@@ -156,6 +177,19 @@ scene.add(ground);
 const grid = new THREE.GridHelper(40, 40, 0x8f9a80, 0xa3ad94);
 grid.position.y = -0.299;
 scene.add(grid);
+grid.material.transparent = true;
+grid.material.opacity = 0.5;
+// El fondo 3D sigue el tema claro/oscuro de la página
+function applyTheme() {
+  const css = getComputedStyle(document.documentElement);
+  const bg = css.getPropertyValue('--scene').trim() || '#dfe6ee';
+  scene.background.set(bg);
+  scene.fog.color.set(bg);
+  ground.material.color.set(css.getPropertyValue('--ground').trim() || '#b7c2a4');
+}
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
 // ------------------------------------------------------------------
 // Materiales y colores por tipo de elemento
