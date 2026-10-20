@@ -22,6 +22,8 @@
   --btn-on-fg: #ffffff;
   --lbl-bg: rgba(255, 255, 255, 0.92);
   --lbl-fg: #17202e;
+  --bad: #c0392b;
+  --warn: #a8650f;
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
@@ -29,14 +31,15 @@
   --panel: rgba(28, 35, 46, 0.9); --line: rgba(200, 215, 235, 0.16); --track: rgba(200, 215, 235, 0.14);
   --hover: rgba(200, 215, 235, 0.4); --shadow: rgba(0, 0, 0, 0.4);
   --fg: #e6ebf2; --muted: #9aa6b8; --accent: #d9a56a; --btn: #2a3340; --btn-on: #e6ebf2; --btn-on-fg: #17202e;
-  --lbl-bg: rgba(24, 30, 40, 0.92); --lbl-fg: #e6ebf2; color-scheme: dark; } }
+  --lbl-bg: rgba(24, 30, 40, 0.92); --lbl-fg: #e6ebf2; --bad: #ff7a6b; --warn: #f2b453; color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #1b222c; --scene: #1b222c; --ground: #39402f;
   --panel: rgba(28, 35, 46, 0.9); --line: rgba(200, 215, 235, 0.16); --track: rgba(200, 215, 235, 0.14);
   --hover: rgba(200, 215, 235, 0.4); --shadow: rgba(0, 0, 0, 0.4);
   --fg: #e6ebf2; --muted: #9aa6b8; --accent: #d9a56a; --btn: #2a3340; --btn-on: #e6ebf2; --btn-on-fg: #17202e;
-  --lbl-bg: rgba(24, 30, 40, 0.92); --lbl-fg: #e6ebf2; color-scheme: dark; }
+  --lbl-bg: rgba(24, 30, 40, 0.92); --lbl-fg: #e6ebf2; --bad: #ff7a6b; --warn: #f2b453; color-scheme: dark; }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--fg);
   font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif; }
 #scene { position: fixed; inset: 0; }
@@ -59,6 +62,43 @@ button.on { background: var(--btn-on); color: var(--btn-on-fg); border-color: va
 .row { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 13px; color: var(--muted); }
 .row input { flex: 1; }
 .keys { font-size: 11px; color: var(--muted); margin-top: 10px; }
+.row select { flex: 1; font: inherit; font-size: 12.5px; padding: 5px 6px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--btn); color: var(--fg); min-width: 0; }
+.row label { min-width: 68px; }
+.row span { min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; color: var(--fg); }
+.btns.mt { margin-top: 10px; }
+.tabs { display: flex; gap: 0; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.tabs button { flex: 1; border: 0; border-radius: 0; background: transparent; }
+.tabs button.on { background: var(--btn-on); color: var(--btn-on-fg); }
+
+#res { top: calc(16px + env(safe-area-inset-top, 0px)); right: 16px; width: 360px; padding: 14px 16px; font-size: 12.5px;
+  max-height: calc(100% - 32px); overflow: auto; }
+#res .rhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+#res h2 { font-size: 15px; margin: 0; }
+#rPct { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+#rLevel { color: var(--muted); margin: 2px 0 10px; }
+.rt { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.rt th { font-size: 11px; font-weight: 600; color: var(--muted); text-align: right; padding: 4px 4px; border-bottom: 1px solid var(--line); }
+.rt th:first-child, .rt td:first-child { text-align: left; padding-left: 0; }
+.rt td { text-align: right; padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.rt td small { display: block; color: var(--muted); font-size: 11px; font-weight: 400; margin-top: 1px; }
+.rt td:first-child { font-weight: 600; }
+.fs-bad { color: var(--bad); font-weight: 700; }
+.fs-warn { color: var(--warn); font-weight: 700; }
+.sum { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 10px 0 12px; }
+.sum dt { color: var(--muted); }
+.sum dd { margin: 0; font-variant-numeric: tabular-nums; }
+.cbar { position: relative; margin-top: 4px; }
+.cbar .grad { height: 12px; border-radius: 3px;
+  background: linear-gradient(90deg, #2b4fd8 0%, #13b5e8 25%, #3cc24a 50%, #f3d01c 75%, #e0261b 100%); }
+.cbar .ticks { position: relative; height: 16px; font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.cbar .ticks span { position: absolute; top: 2px; transform: translateX(-50%); }
+.cbar .ticks span:first-child { transform: none; }
+.cbar .ticks span:last-child { transform: translateX(-100%); }
+.cbar .adm { position: absolute; top: -2px; left: 60%; width: 2px; height: 16px; background: var(--fg); }
+.cbar .cap { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.note { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.lbl.mark { border-left-color: var(--bad); font-weight: 600; }
 
 #legend { left: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding: 10px 14px; font-size: 12px; max-width: 300px; }
 #legend .it { display: flex; align-items: center; gap: 8px; margin: 3px 0; }
@@ -74,6 +114,8 @@ button.on { background: var(--btn-on); color: var(--btn-on-fg); border-color: va
   #hud .sub, .keys { display: none; }
   #legend { display: none; }
   .lbl { font-size: 10px; }
+  #res { top: auto; bottom: calc(12px + env(safe-area-inset-bottom, 0px)); left: 16px; right: 16px; width: auto;
+    max-height: 38%; padding: 10px 12px; }
 }
 </style>
 <script type="importmap">
@@ -90,16 +132,54 @@ button.on { background: var(--btn-on); color: var(--btn-on-fg); border-color: va
 <div id="hud" class="panel">
   <h1>Silo bivalva</h1>
   <div class="sub">2 compartimentos 3,0 × 1,5 m · H = 6 m · chapa 3/16" (4,76 mm)</div>
+  <div class="tabs">
+    <button id="tabAnim" class="on">Montaje</button>
+    <button id="tabCalc">Tensiones</button>
+  </div>
   <div id="phase">Cargando…</div>
   <div class="bar"><div id="prog"></div></div>
-  <div class="btns">
+  <div id="ctlAnim" class="btns">
     <button id="bPause">⏸ Pausar</button>
     <button id="bReset">↺ Reiniciar</button>
+  </div>
+  <div id="ctlCalc" hidden>
+    <div class="btns">
+      <button id="cFill">▲ Llenar</button>
+      <button id="cPause">⏸ Pausar</button>
+      <button id="cEmpty">▼ Vaciar</button>
+      <button id="cMani" class="on">Maní visible</button>
+    </div>
+    <div class="row"><label for="cBoth">Carga</label>
+      <select id="cBoth">
+        <option value="2">Ambos compartimentos</option>
+        <option value="1">Solo compartimento 1</option>
+      </select></div>
+    <div class="row"><label for="cLevel">Llenado</label><input id="cLevel" type="range" min="0" max="100" step="1" value="0"><span id="cLevelV">0 %</span></div>
+    <div class="row"><label for="cScale">Deformada</label><input id="cScale" type="range" min="1" max="200" step="1" value="50"><span id="cScaleV">×50</span></div>
+  </div>
+  <div class="btns mt">
     <button id="bTrans">Chapa semitransparente</button>
     <button id="bLabels" class="on">Etiquetas</button>
   </div>
-  <div class="row">Velocidad <input id="speed" type="range" min="0.25" max="3" step="0.25" value="1"><span id="speedV">1×</span></div>
+  <div class="row"><label for="speed">Velocidad</label><input id="speed" type="range" min="0.25" max="3" step="0.25" value="1"><span id="speedV">1×</span></div>
   <div class="keys">Mouse: girar · rueda: zoom · botón derecho: desplazar · Espacio: pausa · R: reiniciar · T: transparencia</div>
+</div>
+
+<div id="res" class="panel" hidden>
+  <div class="rhead"><h2>Tensiones durante el llenado</h2><span id="rPct">0 %</span></div>
+  <div id="rLevel">Calculando…</div>
+  <table class="rt">
+    <thead><tr><th>Elemento</th><th>σ máx<br>MPa</th><th>Flecha<br>mm</th><th>FS</th></tr></thead>
+    <tbody id="rBody"></tbody>
+  </table>
+  <dl class="sum" id="rSum"></dl>
+  <div class="cbar">
+    <div class="grad"></div>
+    <div class="adm" title="150 MPa admisible"></div>
+    <div class="ticks"><span style="left:0">0</span><span style="left:20%">50</span><span style="left:40%">100</span><span style="left:60%">150</span><span style="left:80%">200</span><span style="left:100%">250</span></div>
+    <div class="cap">σ [MPa] · línea = 150 MPa admisible · rojo oscuro &gt; 250 MPa (fluencia A36)</div>
+  </div>
+  <div class="note">Presiones de Janssen · paños con coeficientes de placa de Timoshenko · anillos como pórtico plano. Deformada exagerada; los perfiles verticales, la tolva y el techo no se verifican (gris).</div>
 </div>
 
 <div id="legend" class="panel"></div>
@@ -128,6 +208,20 @@ const S_VERT = 0.08;           // perfiles verticales (sección no especificada:
 const S_TAB = 0.04;            // perfiles del tabique SHS 40x40x3,2
 const RING_Y = Array.from({ length: 6 }, (_, i) => Y0 + 0.5 + i);  // 6 anillos cada 1 m
 const COMP_Z = [-BC / 2, BC / 2];
+
+// Producto (maní sin cáscara) y acero
+const GAMMA = 600 * 9.81;                  // peso específico, N/m³
+const MU = 0.4, KJ = 0.4;                  // fricción con la pared y relación ph/pv
+const RH = (A * BC) / (2 * (A + BC));      // radio hidráulico de un compartimento = 0,5 m
+const E_ST = 200e9, NU = 0.3;              // ASTM A36
+const F_ADM = 150e6, F_Y = 250e6;          // tensión admisible y de fluencia
+const RING_SEC = { A: 0.080 ** 2 - 0.075 ** 2, I: 776615e-12, W: 19415e-9 };   // SHS 80x80x2,5
+// Tabique a nivel de anillo: 2 SHS 40x40x3,2 soldados a ambos lados de la chapa (sección compuesta)
+const TAB_SEC = (() => {
+  const a = 0.040 ** 2 - 0.0336 ** 2, i = (0.040 ** 4 - 0.0336 ** 4) / 12, d = TW / 2 + 0.020;
+  const I = 2 * (i + a * d * d);
+  return { A: 2 * a + 1.0 * TW, I, W: I / (TW / 2 + 0.040) };
+})();
 
 // ------------------------------------------------------------------
 // Escena
@@ -351,20 +445,20 @@ function maniTexture() {
   return t;
 }
 const maniTex = maniTexture();
-const clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
-const fillMat = new THREE.MeshStandardMaterial({ map: maniTex, roughness: 0.9, side: THREE.DoubleSide, clippingPlanes: [clipPlane] });
+const clipPlanes = COMP_Z.map(() => new THREE.Plane(new THREE.Vector3(0, -1, 0), 0));
+const fillMats = clipPlanes.map(pl => new THREE.MeshStandardMaterial({ map: maniTex, roughness: 0.9, side: THREE.DoubleSide, clippingPlanes: [pl] }));
 const capMat = new THREE.MeshStandardMaterial({ map: maniTex, roughness: 0.9, side: THREE.DoubleSide });
 
 const IN = 0.012;                              // separación de la chapa
 const HW = A / 2 - IN, HD = BC / 2 - TW / 2 - IN, OB = OUT / 2 - 0.005;
-const Y_BOT = Y0 - HOP, Y_TOP = Y0 + H - 0.3;  // nivel mínimo y máximo de llenado
+const Y_BOT = Y0 - HOP, Y_TOP = Y0 + H;        // nivel mínimo y máximo (100 % = maní al borde de la chapa)
 const fills = [], caps = [];
-for (const zc of COMP_Z) {
+COMP_Z.forEach((zc, ci) => {
   const quads = [
     ...frustumQuads(zc, HW, HD, Y0, OB, OB, Y_BOT),
     ...frustumQuads(zc, HW, HD, Y0 + H, HW, HD, Y0),
   ];
-  const f = new THREE.Mesh(quadsGeometry(quads), fillMat);
+  const f = new THREE.Mesh(quadsGeometry(quads), fillMats[ci]);
   f.visible = false;
   scene.add(f);
   fills.push(f);
@@ -374,7 +468,7 @@ for (const zc of COMP_Z) {
   cap.visible = false;
   scene.add(cap);
   caps.push(cap);
-}
+});
 const halfAt = y => {
   if (y >= Y0) return [HW, HD];
   const t = (y - Y_BOT) / HOP;
@@ -420,9 +514,576 @@ grains.frustumCulled = false;
 scene.add(grains);
 const P = [];
 const dummy = new THREE.Object3D();
-function spawn(x, y, z, vx, vy, vz, floor) {
+function spawn(x, y, z, vx, vy, vz, floor, c) {
   if (P.length >= MAXP) return;
-  P.push({ x, y, z, vx, vy, vz, floor, rx: Math.random() * 6, ry: Math.random() * 6 });
+  P.push({ x, y, z, vx, vy, vz, floor, c, rx: Math.random() * 6, ry: Math.random() * 6 });
+}
+
+// ------------------------------------------------------------------
+// Cálculo estructural (sin dependencias). Unidades SI: m, N, Pa.
+// ------------------------------------------------------------------
+
+// ---------- Placa rectangular con carga uniforme: ∇⁴w = p/D ----------
+// Diferencias finitas, malla cuadrada de paso h. edges = { x0, x1, y0, y1 } con
+// 'C' (empotrado: w = 0, ∂w/∂n = 0) o 'S' (apoyado: w = 0, Mn = 0).
+// Devuelve, para p/D = 1, la grilla de w y de momentos (por p = 1).
+function solvePlateCore(Lx, Ly, h, e, nu) {
+  const nx = Math.round(Lx / h), ny = Math.round(Ly / h);
+  const mx = nx - 1, my = ny - 1, n = mx * my, b = 2 * mx;
+  const gx0 = e.x0 === 'C' ? 1 : -1, gx1 = e.x1 === 'C' ? 1 : -1;
+  const gy0 = e.y0 === 'C' ? 1 : -1, gy1 = e.y1 === 'C' ? 1 : -1;
+  const W = b + 1;
+  const U = new Float64Array(n * W);           // banda superior: U[k*W + (i-k)]
+  const id = (i, j) => (j - 1) * mx + (i - 1);  // i = 1..mx, j = 1..my
+  const put = (r, c, v) => { if (c >= r) U[r * W + (c - r)] += v; };
+  for (let j = 1; j <= my; j++) for (let i = 1; i <= mx; i++) {
+    const r = id(i, j);
+    let self = 20;
+    if (i === 1) self += gx0; if (i === mx) self += gx1;   // nodos fantasma
+    if (j === 1) self += gy0; if (j === my) self += gy1;
+    put(r, r, self);
+    const nb = [[1, 0, -8], [-1, 0, -8], [0, 1, -8], [0, -1, -8],
+      [1, 1, 2], [1, -1, 2], [-1, 1, 2], [-1, -1, 2], [2, 0, 1], [-2, 0, 1], [0, 2, 1], [0, -2, 1]];
+    for (const [di, dj, c] of nb) {
+      const ii = i + di, jj = j + dj;
+      if (ii < 1 || ii > mx || jj < 1 || jj > my) continue;  // borde (w = 0) o fantasma (ya sumado)
+      put(r, id(ii, jj), c);
+    }
+  }
+  // Cholesky en banda
+  for (let j = 0; j < n; j++) {
+    let s = U[j * W];
+    for (let k = Math.max(0, j - b); k < j; k++) { const v = U[k * W + (j - k)]; s -= v * v; }
+    const d = Math.sqrt(s);
+    U[j * W] = d;
+    const iMax = Math.min(n - 1, j + b);
+    for (let i = j + 1; i <= iMax; i++) {
+      let t = U[j * W + (i - j)];
+      for (let k = Math.max(0, i - b); k < j; k++) t -= U[k * W + (j - k)] * U[k * W + (i - k)];
+      U[j * W + (i - j)] = t / d;
+    }
+  }
+  const x = new Float64Array(n).fill(h ** 4);
+  for (let i = 0; i < n; i++) {
+    let s = x[i];
+    for (let k = Math.max(0, i - b); k < i; k++) s -= U[k * W + (i - k)] * x[k];
+    x[i] = s / U[i * W];
+  }
+  for (let i = n - 1; i >= 0; i--) {
+    let s = x[i];
+    for (let k = i + 1; k <= Math.min(n - 1, i + b); k++) s -= U[i * W + (k - i)] * x[k];
+    x[i] = s / U[i * W];
+  }
+  const w = (i, j) => {
+    let s = 1;
+    if (i < 0) { i = -i; s *= gx0; } else if (i > nx) { i = 2 * nx - i; s *= gx1; }
+    if (j < 0) { j = -j; s *= gy0; } else if (j > ny) { j = 2 * ny - j; s *= gy1; }
+    if (i === 0 || i === nx || j === 0 || j === ny) return 0;
+    return s * x[id(i, j)];
+  };
+  const NX = nx + 1, NY = ny + 1;
+  const wg = new Float64Array(NX * NY), mg = new Float64Array(NX * NY);
+  const mxg = new Float64Array(NX * NY), myg = new Float64Array(NX * NY);
+  for (let j = 0; j <= ny; j++) for (let i = 0; i <= nx; i++) {
+    const k = j * NX + i;
+    wg[k] = w(i, j);
+    const wxx = (w(i + 1, j) - 2 * w(i, j) + w(i - 1, j)) / (h * h);
+    const wyy = (w(i, j + 1) - 2 * w(i, j) + w(i, j - 1)) / (h * h);
+    const wxy = (w(i + 1, j + 1) - w(i + 1, j - 1) - w(i - 1, j + 1) + w(i - 1, j - 1)) / (4 * h * h);
+    const Mx = -(wxx + nu * wyy), My = -(wyy + nu * wxx), Mxy = -(1 - nu) * wxy;
+    const c = (Mx + My) / 2, r = Math.hypot((Mx - My) / 2, Mxy);
+    mxg[k] = Mx; myg[k] = My;
+    mg[k] = Math.max(Math.abs(c + r), Math.abs(c - r));   // momento principal máximo
+  }
+  return { NX, NY, h, Lx, Ly, w: wg, m: mg, mx: mxg, my: myg };
+}
+// Ordena la malla con la dirección corta como índice interno (banda mínima)
+function solvePlate(Lx, Ly, h, e, nu) {
+  if (Math.round(Lx / h) <= Math.round(Ly / h)) return solvePlateCore(Lx, Ly, h, e, nu);
+  const t = solvePlateCore(Ly, Lx, h, { x0: e.y0, x1: e.y1, y0: e.x0, y1: e.x1 }, nu);
+  const NX = t.NY, NY = t.NX, tr = a => { const o = new Float64Array(NX * NY);
+    for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) o[j * NX + i] = a[i * t.NX + j]; return o; };
+  return { NX, NY, h, Lx, Ly, w: tr(t.w), m: tr(t.m), mx: tr(t.my), my: tr(t.mx) };
+}
+// Interpolación bilineal en la grilla de la placa
+function plateSample(P, arr, x, y) {
+  const fx = Math.min(Math.max(x / P.h, 0), P.NX - 1.000001), fy = Math.min(Math.max(y / P.h, 0), P.NY - 1.000001);
+  const i = Math.floor(fx), j = Math.floor(fy), u = fx - i, v = fy - j, k = j * P.NX + i;
+  return (arr[k] * (1 - u) + arr[k + 1] * u) * (1 - v) + (arr[k + P.NX] * (1 - u) + arr[k + P.NX + 1] * u) * v;
+}
+const arrMax = a => { let m = 0; for (const v of a) if (Math.abs(v) > m) m = Math.abs(v); return m; };
+
+// ---------- Pórtico plano (anillo + tabique) por rigidez directa ----------
+// members: { a:[x,z], b:[x,z], n, E, A, I, loads:[{ c: caso, d:[dx,dz] }] }
+// Devuelve, por caso de carga unitario (q = 1 N/m), desplazamientos y momentos nodales.
+function solveFrame(members, supports, nCases) {
+  const nodes = [], key = p => p.map(v => Math.round(v * 1e6)).join(',');
+  const map = new Map();
+  const node = p => { const k = key(p); if (!map.has(k)) { map.set(k, nodes.length); nodes.push(p); } return map.get(k); };
+  const elems = [];
+  members.forEach((m, mi) => {
+    for (let k = 0; k < m.n; k++) {
+      const pa = [m.a[0] + (m.b[0] - m.a[0]) * k / m.n, m.a[1] + (m.b[1] - m.a[1]) * k / m.n];
+      const pb = [m.a[0] + (m.b[0] - m.a[0]) * (k + 1) / m.n, m.a[1] + (m.b[1] - m.a[1]) * (k + 1) / m.n];
+      elems.push({ mi, i: node(pa), j: node(pb), t0: k / m.n, t1: (k + 1) / m.n });
+    }
+  });
+  const N = nodes.length * 3;
+  const K = Array.from({ length: N }, () => new Float64Array(N));
+  const F = Array.from({ length: nCases }, () => new Float64Array(N));
+  const local = el => {
+    const m = members[el.mi], [xi, zi] = nodes[el.i], [xj, zj] = nodes[el.j];
+    const Le = Math.hypot(xj - xi, zj - zi), c = (xj - xi) / Le, s = (zj - zi) / Le;
+    const EA = m.E * m.A / Le, EI = m.E * m.I;
+    const k = [
+      [EA, 0, 0, -EA, 0, 0],
+      [0, 12 * EI / Le ** 3, 6 * EI / Le ** 2, 0, -12 * EI / Le ** 3, 6 * EI / Le ** 2],
+      [0, 6 * EI / Le ** 2, 4 * EI / Le, 0, -6 * EI / Le ** 2, 2 * EI / Le],
+      [-EA, 0, 0, EA, 0, 0],
+      [0, -12 * EI / Le ** 3, -6 * EI / Le ** 2, 0, 12 * EI / Le ** 3, -6 * EI / Le ** 2],
+      [0, 6 * EI / Le ** 2, 2 * EI / Le, 0, -6 * EI / Le ** 2, 4 * EI / Le]];
+    const T = Array.from({ length: 6 }, () => new Array(6).fill(0));
+    for (const o of [0, 3]) { T[o][o] = c; T[o][o + 1] = s; T[o + 1][o] = -s; T[o + 1][o + 1] = c; T[o + 2][o + 2] = 1; }
+    const fl = Array.from({ length: nCases }, () => new Array(6).fill(0));
+    for (const ld of m.loads) {
+      const wq = ld.d[0] * -s + ld.d[1] * c;   // componente transversal local
+      const f = fl[ld.c];
+      f[1] += wq * Le / 2; f[2] += wq * Le * Le / 12; f[4] += wq * Le / 2; f[5] -= wq * Le * Le / 12;
+    }
+    const dofs = [el.i * 3, el.i * 3 + 1, el.i * 3 + 2, el.j * 3, el.j * 3 + 1, el.j * 3 + 2];
+    return { k, T, fl, dofs, Le };
+  };
+  for (const el of elems) {
+    const { k, T, fl, dofs } = local(el);
+    el.L = local(el);
+    for (let a = 0; a < 6; a++) for (let b = 0; b < 6; b++) {
+      let v = 0;
+      for (let p = 0; p < 6; p++) for (let q = 0; q < 6; q++) v += T[p][a] * k[p][q] * T[q][b];
+      K[dofs[a]][dofs[b]] += v;
+    }
+    for (let c = 0; c < nCases; c++) for (let a = 0; a < 6; a++) {
+      let v = 0; for (let p = 0; p < 6; p++) v += T[p][a] * fl[c][p];
+      F[c][dofs[a]] += v;
+    }
+  }
+  // apoyos (bastan para quitar el movimiento de cuerpo rígido; las cargas están equilibradas)
+  for (const [p, dof] of supports) {
+    const g = map.get(key(p)) * 3 + dof;
+    for (let r = 0; r < N; r++) { K[g][r] = 0; K[r][g] = 0; }
+    K[g][g] = 1; for (const f of F) f[g] = 0;
+  }
+  // eliminación de Gauss (simétrica definida positiva)
+  const X = F.map(f => Float64Array.from(f));
+  for (let p = 0; p < N; p++) {
+    const piv = K[p][p];
+    for (let r = p + 1; r < N; r++) {
+      const fct = K[r][p] / piv; if (fct === 0) continue;
+      const Kr = K[r], Kp = K[p];
+      for (let c = p; c < N; c++) Kr[c] -= fct * Kp[c];
+      for (const x of X) x[r] -= fct * x[p];
+    }
+  }
+  for (const x of X) for (let r = N - 1; r >= 0; r--) {
+    let s = x[r]; for (let c = r + 1; c < N; c++) s -= K[r][c] * x[c]; x[r] = s / K[r][r];
+  }
+  // esfuerzos en extremos de elemento
+  const res = X.map((u, c) => {
+    const M = new Float64Array(nodes.length), Nn = new Float64Array(nodes.length);
+    const perMember = members.map(() => []);
+    for (const el of elems) {
+      const { k, T, fl, dofs } = el.L;
+      const ue = dofs.map(d => u[d]);
+      const ul = T.map(row => row.reduce((s, v, q) => s + v * ue[q], 0));
+      const f = k.map((row, a) => row.reduce((s, v, q) => s + v * ul[q], 0) - fl[c][a]);
+      const Mi = -f[2], Mj = f[5], Ni = -f[0];
+      perMember[el.mi].push({ t: el.t0, M: Mi, N: Ni, n: el.i }, { t: el.t1, M: Mj, N: Ni, n: el.j });
+    }
+    return { u, perMember };
+  });
+  return { nodes, map, res, key };
+}
+
+// ---------- Presiones de Janssen ----------
+function janssen(gamma, mu, K, R) {
+  const C = gamma * R / mu, k = mu * K / R;
+  const ph = z => z > 0 ? C * (1 - Math.exp(-k * z)) : 0;
+  const P = z => C * (z + Math.exp(-k * z) / k);   // primitiva de ph para z ≥ 0
+  const integ = (z1, z2) => {                        // ∫ ph dz entre profundidades z1 < z2
+    z1 = Math.max(z1, 0); z2 = Math.max(z2, 0);
+    return z2 > z1 ? P(z2) - P(z1) : 0;
+  };
+  return { ph, integ, C, k };
+}
+
+
+// ==================================================================
+// Análisis estructural durante el llenado (pestaña "Tensiones")
+// ==================================================================
+const BANDS = [Y0, ...RING_Y, Y0 + H];           // bordes de las franjas de chapa: fondo, 6 anillos, techo
+const NB = BANDS.length - 1;
+const D_PL = E_ST * TW ** 3 / (12 * (1 - NU * NU));   // rigidez de placa
+const JAN = janssen(GAMMA, MU, KJ, RH);
+const sigPlate = M => 6 * Math.abs(M) / (TW * TW);     // σ = M / (t²/6)
+
+const AN = { ready: false };
+const CALC = new THREE.Group();
+CALC.visible = false;
+scene.add(CALC);
+const sheetMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.55, metalness: 0.1 });
+const profMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.2 });
+const greyMat = std(0x8a929c);
+
+// Escala de colores azul → rojo (0 a 250 MPa)
+const CMAP = (() => {
+  const stops = [[0, '#2b4fd8'], [0.25, '#13b5e8'], [0.5, '#3cc24a'], [0.75, '#f3d01c'], [1, '#e0261b']]
+    .map(([t, c]) => [t, new THREE.Color(c)]);
+  const lut = new Float32Array(257 * 3), c = new THREE.Color();
+  for (let i = 0; i <= 256; i++) {
+    const t = i / 256;
+    let k = 0; while (k < stops.length - 2 && t > stops[k + 1][0]) k++;
+    const [t0, c0] = stops[k], [t1, c1] = stops[k + 1];
+    c.copy(c0).lerp(c1, (t - t0) / (t1 - t0));
+    lut.set([c.r, c.g, c.b], i * 3);
+  }
+  return { lut, over: new THREE.Color('#7a0b2a') };
+})();
+function setSigColor(arr, k, sig) {
+  const v = sig / F_Y;
+  if (v > 1) { arr[k * 3] = CMAP.over.r; arr[k * 3 + 1] = CMAP.over.g; arr[k * 3 + 2] = CMAP.over.b; return; }
+  const i = Math.round(Math.max(v, 0) * 256) * 3;
+  arr[k * 3] = CMAP.lut[i]; arr[k * 3 + 1] = CMAP.lut[i + 1]; arr[k * 3 + 2] = CMAP.lut[i + 2];
+}
+
+// Paños: exteriores 3 bordes empotrados + 1 apoyado (el de la esquina); tabique 4 empotrados
+const plateCache = new Map();
+function getPlate(kind, Lx, Ly) {
+  const key = `${kind}${Lx.toFixed(3)}x${Ly.toFixed(3)}`;
+  if (!plateCache.has(key)) {
+    const e = kind === 'E' ? { x0: 'S', x1: 'C', y0: 'C', y1: 'C' } : { x0: 'C', x1: 'C', y0: 'C', y1: 'C' };
+    const P = solvePlate(Lx, Ly, Math.min(Lx, Ly) / 40, e, NU);
+    let k = 0; for (let i = 0; i < P.m.length; i++) if (P.m[i] > P.m[k]) k = i;
+    P.mMax = P.m[k]; P.wMax = arrMax(P.w);
+    P.atRing = Math.floor(k / P.NX) === 0 || Math.floor(k / P.NX) === P.NY - 1;
+    plateCache.set(key, P);
+  }
+  return plateCache.get(key);
+}
+
+// Caras: s = coordenada a lo largo de la cara (centrada); cada cara exterior se divide en paños
+// que van de la esquina (borde apoyado) al perfil vertical o al tabique (borde empotrado)
+const FACES = {
+  front: { span: A, half: A / 2, pos: (s, y) => [s, y, -L / 2], n: [0, 0, -1], comp: () => 0 },
+  back:  { span: A, half: A / 2, pos: (s, y) => [s, y, L / 2], n: [0, 0, 1], comp: () => 1 },
+  right: { span: L, half: L / 2, pos: (s, y) => [A / 2, y, s], n: [1, 0, 0], comp: s => (s < 0 ? 0 : 1) },
+  left:  { span: L, half: L / 2, pos: (s, y) => [-A / 2, y, s], n: [-1, 0, 0], comp: s => (s < 0 ? 0 : 1) },
+  tab:   { span: A, half: A / 2, pos: (s, y) => [s, y, 0], n: [0, 0, 1], comp: () => -1 },
+};
+const memAt = (mi, t) => {
+  const n = AN.mem[mi].n, f = Math.min(Math.max(t, 0), 1) * n, i = Math.min(Math.floor(f), n - 1);
+  return { mi, i, a: f - i };
+};
+function faceMember(face, s) {
+  if (face === 'front') return memAt(0, (s + A / 2) / A);
+  if (face === 'back') return memAt(1, (s + A / 2) / A);
+  if (face === 'right') return s < 0 ? memAt(2, (s + L / 2) / (L / 2)) : memAt(3, s / (L / 2));
+  if (face === 'left') return s < 0 ? memAt(4, (s + L / 2) / (L / 2)) : memAt(5, s / (L / 2));
+  return memAt(6, (s + A / 2) / A);
+}
+// Desplazamiento (x, z) y momento del pórtico por carga unitaria del caso c
+function memUnit(m, c) {
+  const M = AN.mem[m.mi], u = AN.U[c], n0 = M.node[m.i] * 3, n1 = M.node[m.i + 1] * 3;
+  return [u[n0] + (u[n1] - u[n0]) * m.a, u[n0 + 1] + (u[n1 + 1] - u[n0 + 1]) * m.a,
+    M.M[c][m.i] + (M.M[c][m.i + 1] - M.M[c][m.i]) * m.a];
+}
+// Franja vertical: índice k y peso para interpolar entre bordes/anillos
+function bandAt(y) {
+  let k = 0; while (k < NB - 1 && y > BANDS[k + 1] + 1e-9) k++;
+  return [k, (y - BANDS[k]) / (BANDS[k + 1] - BANDS[k])];
+}
+
+const sheets = [], profiles = [];
+function makeSheet(face) {
+  const F = FACES[face], DS = 0.05;
+  const ns = Math.round(F.span / DS), ny = Math.round(H / DS), nv = (ns + 1) * (ny + 1);
+  const pos = new Float32Array(nv * 3), col = new Float32Array(nv * 3), base = new Float32Array(nv * 3);
+  const cols = [], verts = [];
+  for (let i = 0; i <= ns; i++) {
+    const s = -F.span / 2 + i * DS;
+    const m = faceMember(face, s);
+    cols.push({ s, unit: [memUnit(m, 0), memUnit(m, 1)], rd: new Float64Array((NB + 1) * 2) });
+  }
+  for (let j = 0; j <= ny; j++) {
+    const y = Y0 + j * DS;
+    const [kb, ab] = bandAt(y);
+    // franjas que tocan este nodo (dos si está sobre un anillo)
+    const bands = [];
+    for (let b = 0; b < NB; b++) if (y >= BANDS[b] - 1e-9 && y <= BANDS[b + 1] + 1e-9) bands.push(b);
+    for (let i = 0; i <= ns; i++) {
+      const s = cols[i].s, k = j * (ns + 1) + i;
+      base.set(F.pos(s, y), k * 3);
+      const ent = [];
+      const comps = face === 'tab' ? [-1] : (Math.abs(s) < 1e-9 && (face === 'right' || face === 'left') ? [0, 1] : [F.comp(s)]);
+      for (const b of bands) for (const c of comps) {
+        const hb = BANDS[b + 1] - BANDS[b];
+        const P = face === 'tab' ? getPlate('T', F.span, hb) : getPlate('E', F.half, hb);
+        const xl = face === 'tab' ? s + F.span / 2 : F.half - Math.abs(s);
+        const yl = y - BANDS[b];
+        ent.push({ c, b, w: plateSample(P, P.w, xl, yl), m: plateSample(P, P.m, xl, yl) });
+      }
+      verts.push({ i, kb, ab, ent });
+    }
+  }
+  const idx = [];
+  for (let j = 0; j < ny; j++) for (let i = 0; i < ns; i++) {
+    const a = j * (ns + 1) + i, b = a + 1, c = a + ns + 1, d = c + 1;
+    idx.push(a, b, d, a, d, c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.setIndex(idx);
+  const mesh = new THREE.Mesh(g, sheetMat);
+  mesh.castShadow = true;
+  CALC.add(mesh);
+  sheets.push({ face, F, cols, verts, base, pos, col, g, mesh, name: face === 'tab' ? 'tab' : 'ext' });
+}
+
+// Perfiles deformables (anillos, perfiles del tabique, verticales)
+function makeProfile(geo, kind, info) {
+  geo = geo.toNonIndexed();
+  const pa = geo.getAttribute('position'), nv = pa.count;
+  const base = Float32Array.from(pa.array), col = new Float32Array(nv * 3);
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const per = [];
+  for (let k = 0; k < nv; k++) per.push(info(base[k * 3], base[k * 3 + 1], base[k * 3 + 2]));
+  const mesh = new THREE.Mesh(geo, kind === 'vert' ? greyMat : profMat);
+  mesh.castShadow = true;
+  CALC.add(mesh);
+  profiles.push({ kind, geo, base, col, per, mesh });
+}
+
+function buildAnalysis() {
+  if (AN.ready) return;
+  // Pórtico plano por nivel de anillo: 4 lados SHS 80 + tabique (2 SHS 40 sobre la chapa) como tirante/viga
+  const hx = A / 2, hz = L / 2;
+  const ring = { E: E_ST, A: RING_SEC.A, I: RING_SEC.I }, tabS = { E: E_ST, A: TAB_SEC.A, I: TAB_SEC.I };
+  const members = [
+    { a: [-hx, -hz], b: [hx, -hz], ...ring, loads: [{ c: 0, d: [0, -1] }] },
+    { a: [-hx, hz], b: [hx, hz], ...ring, loads: [{ c: 1, d: [0, 1] }] },
+    { a: [hx, -hz], b: [hx, 0], ...ring, loads: [{ c: 0, d: [1, 0] }] },
+    { a: [hx, 0], b: [hx, hz], ...ring, loads: [{ c: 1, d: [1, 0] }] },
+    { a: [-hx, -hz], b: [-hx, 0], ...ring, loads: [{ c: 0, d: [-1, 0] }] },
+    { a: [-hx, 0], b: [-hx, hz], ...ring, loads: [{ c: 1, d: [-1, 0] }] },
+    { a: [-hx, 0], b: [hx, 0], ...tabS, loads: [{ c: 0, d: [0, 1] }, { c: 1, d: [0, -1] }] },
+  ].map(m => ({ ...m, n: 2 * Math.max(2, Math.round(Math.hypot(m.b[0] - m.a[0], m.b[1] - m.a[1]) / 0.2)) }));
+  const FR = solveFrame(members, [[[0, 0], 0], [[0, 0], 1], [[hx, 0], 1]], 2);
+  AN.nodes = FR.nodes;
+  AN.U = [FR.res[0].u, FR.res[1].u];
+  AN.mem = members.map((m, mi) => {
+    const n = m.n, node = new Int32Array(n + 1), cnt = new Float64Array(n + 1);
+    const M = [new Float64Array(n + 1), new Float64Array(n + 1)];
+    FR.res[0].perMember[mi].forEach((e, k) => {
+      const i = Math.round(e.t * n);
+      node[i] = e.n; cnt[i]++;
+      M[0][i] += e.M; M[1][i] += FR.res[1].perMember[mi][k].M;
+    });
+    for (let i = 0; i <= n; i++) { M[0][i] /= cnt[i]; M[1][i] /= cnt[i]; }
+    return { n, node, M, W: mi === 6 ? TAB_SEC.W : RING_SEC.W };
+  });
+  // Paños
+  AN.ext = [], AN.tabP = [];
+  for (let b = 0; b < NB; b++) {
+    const hb = BANDS[b + 1] - BANDS[b];
+    AN.ext.push([...new Set([getPlate('E', A / 2, hb), getPlate('E', L / 2, hb)])]);
+    AN.tabP.push(getPlate('T', A, hb));
+  }
+  // Mallas deformables
+  for (const f of ['front', 'back', 'right', 'left', 'tab']) makeSheet(f);
+  const S = S_RING, OVz = L / 2 + S / 2, OVx = A / 2 + S / 2;
+  RING_Y.forEach((y, r) => {
+    const ringInfo = (face, coord) => (x, yy, z) => ({ r, m: faceMember(face, coord(x, z)) });
+    const clampS = (v, h) => Math.min(Math.max(v, -h), h);
+    makeProfile(new THREE.BoxGeometry(A + 2 * S, S, S, 60, 1, 1).translate(0, y, -OVz), 'ring', ringInfo('front', x => clampS(x, A / 2)));
+    makeProfile(new THREE.BoxGeometry(A + 2 * S, S, S, 60, 1, 1).translate(0, y, OVz), 'ring', ringInfo('back', x => clampS(x, A / 2)));
+    makeProfile(new THREE.BoxGeometry(S, S, L, 1, 1, 60).translate(OVx, y, 0), 'ring', ringInfo('right', (x, z) => clampS(z, L / 2)));
+    makeProfile(new THREE.BoxGeometry(S, S, L, 1, 1, 60).translate(-OVx, y, 0), 'ring', ringInfo('left', (x, z) => clampS(z, L / 2)));
+    for (const sg of [-1, 1])
+      makeProfile(new THREE.BoxGeometry(A - 2 * TW, S_TAB, S_TAB, 60, 1, 1).translate(0, y, sg * (TW / 2 + S_TAB / 2)),
+        'ring', ringInfo('tab', x => clampS(x, A / 2)));
+  });
+  const OV = S_RING + S_VERT / 2;
+  const vertInfo = face => (x, y) => { const [k, a] = bandAt(Math.min(Math.max(y, Y0), Y0 + H)); return { face, k, a, m: faceMember(face, 0) }; };
+  makeProfile(new THREE.BoxGeometry(S_VERT, H, S_VERT, 1, 60, 1).translate(0, Y0 + H / 2, -(L / 2 + OV)), 'vert', vertInfo('front'));
+  makeProfile(new THREE.BoxGeometry(S_VERT, H, S_VERT, 1, 60, 1).translate(0, Y0 + H / 2, L / 2 + OV), 'vert', vertInfo('back'));
+  makeProfile(new THREE.BoxGeometry(S_VERT, H, S_VERT, 1, 60, 1).translate(A / 2 + OV, Y0 + H / 2, 0), 'vert', vertInfo('right'));
+  makeProfile(new THREE.BoxGeometry(S_VERT, H, S_VERT, 1, 60, 1).translate(-(A / 2 + OV), Y0 + H / 2, 0), 'vert', vertInfo('left'));
+  // Contorno sin deformar como referencia
+  const ref = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(A, H, L)),
+    new THREE.LineBasicMaterial({ color: 0x5b6678, transparent: true, opacity: 0.55 }));
+  ref.position.set(0, Y0 + H / 2, 0);
+  CALC.add(ref);
+  AN.ready = true;
+}
+
+// Cargas para los niveles de maní lv = [nivel comp. 1, nivel comp. 2] (cotas absolutas)
+function loadsAt(lv) {
+  const q = RING_Y.map((y, r) => {
+    const ya = (BANDS[r] + y) / 2, yb = (y + BANDS[r + 2]) / 2;      // ancho tributario del anillo
+    return lv.map(l => JAN.integ(l - yb, l - ya));                   // N/m
+  });
+  const pb = lv.map(l => BANDS.slice(0, NB).map((y, b) =>
+    JAN.integ(l - BANDS[b + 1], l - y) / (BANDS[b + 1] - y)));        // presión media del paño, Pa
+  return { q, pb };
+}
+
+const MAXV = { s: 0, pos: new THREE.Vector3(), u: 0 };
+function updateSheet(S, st, scale) {
+  const { q, pb } = st, NBp = NB + 1;
+  for (const c of S.cols) {
+    c.rd.fill(0);
+    for (let r = 0; r < RING_Y.length; r++) {
+      const q0 = q[r][0], q1 = q[r][1];
+      c.rd[(r + 1) * 2] = q0 * c.unit[0][0] + q1 * c.unit[1][0];
+      c.rd[(r + 1) * 2 + 1] = q0 * c.unit[0][1] + q1 * c.unit[1][1];
+    }
+  }
+  const n = S.F.n, pos = S.pos, base = S.base, col = S.col;
+  S.verts.forEach((v, k) => {
+    const rd = S.cols[v.i].rd, k0 = v.kb * 2, k1 = (v.kb + 1) * 2;
+    const ux = rd[k0] + (rd[k1] - rd[k0]) * v.ab, uz = rd[k0 + 1] + (rd[k1 + 1] - rd[k0 + 1]) * v.ab;
+    let w = 0, sig = 0;
+    for (const e of v.ent) {
+      const p = e.c < 0 ? pb[0][e.b] - pb[1][e.b] : pb[e.c][e.b];
+      if (Math.abs(e.w * p) > Math.abs(w)) w = e.w * p;
+      sig = Math.max(sig, sigPlate(e.m * p));
+    }
+    w /= D_PL;
+    const dx = ux + n[0] * w, dz = uz + n[2] * w;
+    pos[k * 3] = base[k * 3] + scale * dx;
+    pos[k * 3 + 1] = base[k * 3 + 1];
+    pos[k * 3 + 2] = base[k * 3 + 2] + scale * dz;
+    setSigColor(col, k, sig);
+    const u = Math.hypot(dx, dz);
+    if (u > MAXV.u) MAXV.u = u;
+    if (sig > MAXV.s) { MAXV.s = sig; MAXV.pos.set(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2]); }
+  });
+  S.g.attributes.position.needsUpdate = true;
+  S.g.attributes.color.needsUpdate = true;
+  S.g.computeVertexNormals();
+  S.g.computeBoundingSphere();
+}
+function updateProfile(Pr, st, scale) {
+  const pa = Pr.geo.attributes.position.array, base = Pr.base;
+  Pr.per.forEach((v, k) => {
+    let ux = 0, uz = 0, sig = 0;
+    if (Pr.kind === 'ring') {
+      const u0 = memUnit(v.m, 0), u1 = memUnit(v.m, 1), q0 = st.q[v.r][0], q1 = st.q[v.r][1];
+      ux = q0 * u0[0] + q1 * u1[0]; uz = q0 * u0[1] + q1 * u1[1];
+      sig = Math.abs(q0 * u0[2] + q1 * u1[2]) / AN.mem[v.m.mi].W;
+      setSigColor(Pr.col, k, sig);
+      if (sig > MAXV.s) { MAXV.s = sig; MAXV.pos.set(base[k * 3] + scale * ux, base[k * 3 + 1], base[k * 3 + 2] + scale * uz); }
+    } else {
+      const u0 = memUnit(v.m, 0), u1 = memUnit(v.m, 1);
+      const at = r => r <= 0 || r > RING_Y.length ? [0, 0] :
+        [st.q[r - 1][0] * u0[0] + st.q[r - 1][1] * u1[0], st.q[r - 1][0] * u0[1] + st.q[r - 1][1] * u1[1]];
+      const d0 = at(v.k), d1 = at(v.k + 1);
+      ux = d0[0] + (d1[0] - d0[0]) * v.a; uz = d0[1] + (d1[1] - d0[1]) * v.a;
+    }
+    pa[k * 3] = base[k * 3] + scale * ux;
+    pa[k * 3 + 2] = base[k * 3 + 2] + scale * uz;
+  });
+  Pr.geo.attributes.position.needsUpdate = true;
+  Pr.geo.attributes.color.needsUpdate = true;
+  Pr.geo.computeVertexNormals();
+  Pr.geo.computeBoundingSphere();
+}
+
+// Resultados por elemento (valores exactos de los coeficientes y del pórtico, no de la malla)
+const fmt = (v, d = 1) => v.toLocaleString('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const yTxt = y => fmt(y - Y0, 1);
+function results(st) {
+  const R = {
+    ext: { name: 'Chapa exterior', s: 0, w: 0, loc: '—' },
+    tab: { name: 'Tabique', s: 0, w: 0, loc: '—' },
+    ring: { name: 'Anillos SHS 80×80×2,5', s: 0, w: 0, loc: '—', wloc: '' },
+    ptab: { name: 'Perfiles tabique 2×SHS 40', s: 0, w: 0, loc: '—' },
+  };
+  for (let b = 0; b < NB; b++) {
+    const band = `paño ${yTxt(BANDS[b])}–${yTxt(BANDS[b + 1])} m`;
+    for (let c = 0; c < 2; c++) for (const P of AN.ext[b]) {
+      const p = st.pb[c][b], s = sigPlate(P.mMax * p), w = P.wMax * p / D_PL;
+      if (s > R.ext.s) { R.ext.s = s; R.ext.loc = `${band}, comp. ${c + 1}, borde ${P.atRing ? 'sobre anillo' : 'vertical'}`; }
+      R.ext.w = Math.max(R.ext.w, w);
+    }
+    const P = AN.tabP[b], p = Math.abs(st.pb[0][b] - st.pb[1][b]);
+    const s = sigPlate(P.mMax * p);
+    if (s > R.tab.s) { R.tab.s = s; R.tab.loc = `${band}, borde sobre perfil`; }
+    R.tab.w = Math.max(R.tab.w, P.wMax * p / D_PL);
+  }
+  RING_Y.forEach((y, r) => {
+    const q0 = st.q[r][0], q1 = st.q[r][1];
+    AN.mem.forEach((M, mi) => {
+      const T = mi === 6 ? R.ptab : R.ring;
+      for (let i = 0; i <= M.n; i++) {
+        const nd = M.node[i], s = Math.abs(q0 * M.M[0][i] + q1 * M.M[1][i]) / M.W;
+        const u = Math.hypot(q0 * AN.U[0][nd * 3] + q1 * AN.U[1][nd * 3], q0 * AN.U[0][nd * 3 + 1] + q1 * AN.U[1][nd * 3 + 1]);
+        const [x, z] = AN.nodes[nd];
+        const where = mi === 6 ? (Math.abs(x) > A / 2 - 1e-6 ? 'unión con la pared' : 'tramo')
+          : Math.abs(Math.abs(x) - A / 2) < 1e-6 && Math.abs(Math.abs(z) - L / 2) < 1e-6 ? 'esquina'
+          : Math.abs(z) < 1e-6 ? 'unión con el tabique' : 'tramo';
+        if (s > T.s) { T.s = s; T.loc = `anillo ${r + 1} (${yTxt(y)} m), ${where}`; }
+        if (u > T.w) { T.w = u; T.wloc = `anillo ${r + 1}`; }
+      }
+    });
+  });
+  return R;
+}
+
+const resEls = { pct: document.getElementById('rPct'), level: document.getElementById('rLevel'),
+  body: document.getElementById('rBody'), sum: document.getElementById('rSum') };
+const markDiv = document.createElement('div');
+markDiv.className = 'lbl mark';
+const marker = new CSS2DObject(markDiv);
+marker.visible = false;
+scene.add(marker);
+
+function fsCell(s) {
+  if (s < 1e3) return '<td>—</td>';
+  const fs = F_ADM / s, cls = fs < 1 ? 'fs-bad' : fs < 1.5 ? 'fs-warn' : '';
+  return `<td class="${cls}">${fmt(fs, 2)}</td>`;
+}
+function renderResults(R, lv, fr) {
+  const hm = Math.max(0, lv[0] - Y0);
+  resEls.pct.textContent = `${Math.round(fr * 100)} %`;
+  resEls.level.textContent = `Maní a ${fmt(hm, 2)} m sobre el fondo del cuerpo` +
+    ` · ph = ${fmt(JAN.ph(hm) / 1000, 2)} kPa · pv = ${fmt(JAN.ph(hm) / KJ / 1000, 2)} kPa` +
+    (lv[1] < Y0 && hm > 0 ? ' · comp. 2 vacío' : '');
+  const rows = [R.ext, R.tab, R.ring, R.ptab];
+  resEls.body.innerHTML = rows.map(r => `<tr><td>${r.name}<small>${r.s > 1e3 ? r.loc : '—'}</small></td>` +
+    `<td>${fmt(r.s / 1e6, 1)}</td><td>${fmt(r.w * 1000, 2)}</td>${fsCell(r.s)}</tr>`).join('');
+  const sMax = rows.reduce((a, r) => (r.s > a.s ? r : a));
+  const wMax = rows.reduce((a, r) => (r.w > a.w ? r : a));
+  resEls.sum.innerHTML = sMax.s < 1e3 ? '<dt>Sin carga</dt><dd>El maní todavía no llega a la chapa.</dd>' :
+    `<dt>σ máx</dt><dd><b>${fmt(sMax.s / 1e6, 1)} MPa</b> · ${sMax.name}, ${sMax.loc}</dd>` +
+    `<dt>Flecha máx</dt><dd><b>${fmt(wMax.w * 1000, 2)} mm</b> · ${wMax.name}${wMax.wloc ? ', ' + wMax.wloc : ''}</dd>` +
+    `<dt>FS mín</dt><dd><b class="${F_ADM / sMax.s < 1 ? 'fs-bad' : F_ADM / sMax.s < 1.5 ? 'fs-warn' : ''}">${fmt(F_ADM / sMax.s, 2)}</b> · ${sMax.name}</dd>` +
+    `<dt>Despl. total</dt><dd>${fmt(MAXV.u * 1000, 2)} mm (anillo + paño, máx. de la chapa)</dd>`;
+  marker.visible = showLabels && sMax.s >= 1e3;
+  markDiv.textContent = `σ máx ${fmt(sMax.s / 1e6, 1)} MPa`;
+  marker.position.copy(MAXV.pos);
+}
+
+let anKey = '';
+function updateAnalysis(lv, fr, scale) {
+  if (!AN.ready) return;
+  const key = `${lv[0].toFixed(4)}|${lv[1].toFixed(4)}|${scale}|${showLabels}`;
+  if (key === anKey) return;
+  anKey = key;
+  const st = loadsAt(lv);
+  MAXV.s = 0; MAXV.u = 0;
+  for (const S of sheets) updateSheet(S, st, scale);
+  for (const Pr of profiles) updateProfile(Pr, st, scale);
+  renderResults(results(st), lv, fr);
 }
 
 // ------------------------------------------------------------------
@@ -438,6 +1099,8 @@ const T_END = T_DIS1 + 3;
 
 let T = 0, paused = false, speed = 1, showLabels = true, transparent = false;
 let userSetTrans = false, cycles = 0, spawnAcc = 0;
+let mode = 'anim';                                       // 'anim' = montaje, 'calc' = tensiones
+const calc = { frac: 0, dir: 0, lastDir: 1, both: true, mani: true, scale: 50 };
 
 function setTransparent(on) {
   transparent = on;
@@ -447,6 +1110,10 @@ function setTransparent(on) {
     m.depthWrite = !on;
     m.needsUpdate = true;
   }
+  sheetMat.transparent = on;
+  sheetMat.opacity = on ? 0.45 : 1;
+  sheetMat.depthWrite = !on;
+  sheetMat.needsUpdate = true;
   document.getElementById('bTrans').classList.toggle('on', on);
 }
 
@@ -462,7 +1129,8 @@ function updateBuild() {
     st.items.forEach((m, i) => {
       const delay = n > 1 ? (i / (n - 1)) * STAGE * 0.55 : 0;
       const k = Math.min(Math.max((T - s0 - delay) / (STAGE * 0.4), 0), 1);
-      m.visible = k > 0;
+      // en "Tensiones" las chapas, anillos y perfiles se reemplazan por sus versiones deformables
+      m.visible = k > 0 && !(mode === 'calc' && si >= 3 && si <= 5);
       m.position.y = m.userData.baseY + (1 - ease(k)) * 3.5;
     });
     for (const l of st.labels) l.visible = showLabels && T > s0 + STAGE;
@@ -478,6 +1146,12 @@ function fillFraction() {
 }
 
 function phaseText(f) {
+  if (mode === 'calc') {
+    if (!AN.ready) return 'Calculando…';
+    if (calc.dir > 0) return `Llenando · ${Math.round(calc.frac * 100)} %`;
+    if (calc.dir < 0) return `Vaciando · ${Math.round(calc.frac * 100)} %`;
+    return calc.frac >= 1 ? 'Lleno (100 %)' : calc.frac <= 0 ? 'Vacío' : `Pausado · ${Math.round(calc.frac * 100)} %`;
+  }
   if (T < T_BUILD) {
     const si = Math.min(Math.floor(T / STAGE), stages.length - 1);
     return `Armado ${si + 1}/${stages.length}: ${stages[si].name}`;
@@ -490,37 +1164,50 @@ function phaseText(f) {
 }
 
 function step(dt) {
-  T += dt;
-  if (T > T_END) { T = T_FILL0 - 0.5; cycles++; }
-
-  // Al empezar a llenar, se hace la chapa semitransparente (si el usuario no eligió otra cosa)
-  if (T >= T_FILL0 - 0.5 && T < T_FILL1 && !transparent && !userSetTrans) setTransparent(true);
-
-  const f = fillFraction();
-  const level = levelFromFrac(f);
-  const filling = T >= T_FILL0 && T < T_FILL1;
-  const discharging = T >= T_DIS0 && T < T_DIS1;
+  let fr, filling, discharging;
+  if (mode === 'anim') {
+    if (paused) dt = 0;
+    T += dt;
+    if (T > T_END) { T = T_FILL0 - 0.5; cycles++; }
+    // Al empezar a llenar, se hace la chapa semitransparente (si el usuario no eligió otra cosa)
+    if (T >= T_FILL0 - 0.5 && T < T_FILL1 && !transparent && !userSetTrans) setTransparent(true);
+    const f = fillFraction();
+    fr = [f, f];
+    filling = [T >= T_FILL0 && T < T_FILL1, T >= T_FILL0 && T < T_FILL1];
+    discharging = [T >= T_DIS0 && T < T_DIS1, T >= T_DIS0 && T < T_DIS1];
+  } else {
+    if (AN.ready) {
+      calc.frac = Math.min(Math.max(calc.frac + calc.dir * dt / D_FILL, 0), 1);
+      if ((calc.dir > 0 && calc.frac >= 1) || (calc.dir < 0 && calc.frac <= 0)) setCalcDir(0);
+    }
+    fr = [calc.frac, calc.both ? calc.frac : 0];
+    filling = fr.map((f, c) => calc.dir > 0 && f < 1 && (c === 0 || calc.both));
+    discharging = fr.map(f => calc.dir < 0 && f > 0);
+  }
+  const lv = fr.map(levelFromFrac);
 
   // Partículas nuevas
   spawnAcc += dt;
   const rate = 1 / 260;  // una partícula cada ~4 ms por compartimento
   while (spawnAcc > rate) {
     spawnAcc -= rate;
-    for (const zc of COMP_Z) {
-      if (filling) {
+    COMP_Z.forEach((zc, c) => {
+      if (filling[c]) {
         spawn((Math.random() - 0.5) * 0.3, Y0 + H - 0.05, zc + (Math.random() - 0.5) * 0.3,
-          (Math.random() - 0.5) * 0.9, -0.5, (Math.random() - 0.5) * 0.6, 'level');
-      } else if (discharging) {
+          (Math.random() - 0.5) * 0.9, -0.5, (Math.random() - 0.5) * 0.6, 'level', c);
+      } else if (discharging[c]) {
         spawn((Math.random() - 0.5) * OUT * 0.8, Y0 - HOP - 0.22, zc + (Math.random() - 0.5) * OUT * 0.8,
-          (Math.random() - 0.5) * 0.15, -0.8, (Math.random() - 0.5) * 0.15, 'pile');
+          (Math.random() - 0.5) * 0.15, -0.8, (Math.random() - 0.5) * 0.15, 'pile', c);
       }
-    }
+    });
   }
 
-  // Montones bajo las bocas
+  // Montones bajo las bocas (solo en el montaje)
   let pr = 0;
-  if (T >= T_DIS0) pr = 0.7 * Math.cbrt(1 - f);
-  else if (cycles > 0 && T < T_FILL0 + 2) pr = 0.7 * Math.max(0, 1 - (T - (T_FILL0 - 0.5)) / 2.5);
+  if (mode === 'anim') {
+    if (T >= T_DIS0) pr = 0.7 * Math.cbrt(1 - fr[0]);
+    else if (cycles > 0 && T < T_FILL0 + 2) pr = 0.7 * Math.max(0, 1 - (T - (T_FILL0 - 0.5)) / 2.5);
+  }
   for (const p of piles) {
     p.visible = pr > 0.01;
     p.scale.set(pr, pr * Math.tan(Math.PI / 6), pr);
@@ -536,7 +1223,7 @@ function step(dt) {
     // rebote contra las paredes del compartimento mientras cae adentro
     if (p.floor === 'level') {
       if (Math.abs(p.x) > HW) { p.x = Math.sign(p.x) * HW; p.vx *= -0.4; }
-      if (p.y <= level) { P[i] = P[P.length - 1]; P.pop(); continue; }
+      if (p.y <= lv[p.c]) { P[i] = P[P.length - 1]; P.pop(); continue; }
     } else if (p.y <= pileTop * 0.85) { P[i] = P[P.length - 1]; P.pop(); continue; }
   }
   for (const p of P) {
@@ -548,44 +1235,103 @@ function step(dt) {
   }
   grains.count = k;
   grains.instanceMatrix.needsUpdate = true;
+  const maniOn = mode === 'anim' || calc.mani;
+  grains.visible = maniOn;
 
   // Volumen de maní
-  const show = f > 0.0005;
-  clipPlane.constant = level;
-  const [hw, hd] = halfAt(level);
   fills.forEach((m, i) => {
+    const show = maniOn && fr[i] > 0.0005;
+    clipPlanes[i].constant = lv[i];
+    const [hw, hd] = halfAt(lv[i]);
     m.visible = show;
     caps[i].visible = show;
-    caps[i].position.y = level;
+    caps[i].position.y = lv[i];
     caps[i].scale.set(hw * 2, hd * 2, 1);
   });
 
   updateBuild();
-  document.getElementById('phase').textContent = phaseText(f);
-  document.getElementById('prog').style.width = `${Math.min(T / T_END, 1) * 100}%`;
+  if (mode === 'calc') {
+    updateAnalysis(lv, fr[0], calc.scale);
+    if (document.activeElement !== cLevel) { cLevel.value = Math.round(calc.frac * 100); }
+    cLevelV.textContent = `${Math.round(calc.frac * 100)} %`;
+  }
+  document.getElementById('phase').textContent = phaseText(fr[0]);
+  document.getElementById('prog').style.width = `${(mode === 'calc' ? calc.frac : Math.min(T / T_END, 1)) * 100}%`;
 }
 
 // ------------------------------------------------------------------
 // UI
 // ------------------------------------------------------------------
-const bPause = document.getElementById('bPause');
+const $ = id => document.getElementById(id);
+const bPause = $('bPause');
 function togglePause() {
   paused = !paused;
   bPause.textContent = paused ? '▶ Reanudar' : '⏸ Pausar';
   bPause.classList.toggle('on', paused);
 }
 bPause.onclick = togglePause;
-document.getElementById('bReset').onclick = reset;
-document.getElementById('bTrans').onclick = () => { userSetTrans = true; setTransparent(!transparent); };
-const bLabels = document.getElementById('bLabels');
-bLabels.onclick = () => { showLabels = !showLabels; bLabels.classList.toggle('on', showLabels); updateBuild(); };
-const speedIn = document.getElementById('speed');
-speedIn.oninput = () => { speed = +speedIn.value; document.getElementById('speedV').textContent = speed + '×'; };
+$('bReset').onclick = reset;
+$('bTrans').onclick = () => { userSetTrans = true; setTransparent(!transparent); };
+const bLabels = $('bLabels');
+bLabels.onclick = () => {
+  showLabels = !showLabels;
+  bLabels.classList.toggle('on', showLabels);
+  marker.visible = showLabels && marker.visible;
+  anKey = '';
+  updateBuild();
+};
+const speedIn = $('speed');
+speedIn.oninput = () => { speed = +speedIn.value; $('speedV').textContent = speed + '×'; };
+
+// Pestaña "Tensiones"
+const cLevel = $('cLevel'), cLevelV = $('cLevelV'), cScale = $('cScale');
+function setCalcDir(d) {
+  calc.dir = d;
+  if (d) calc.lastDir = d;
+  $('cFill').classList.toggle('on', d > 0);
+  $('cEmpty').classList.toggle('on', d < 0);
+  $('cPause').classList.toggle('on', d === 0);
+}
+$('cFill').onclick = () => setCalcDir(calc.frac >= 1 ? 0 : 1);
+$('cEmpty').onclick = () => setCalcDir(calc.frac <= 0 ? 0 : -1);
+$('cPause').onclick = () => setCalcDir(0);
+$('cMani').onclick = () => { calc.mani = !calc.mani; $('cMani').classList.toggle('on', calc.mani); };
+$('cBoth').onchange = e => { calc.both = e.target.value === '2'; P.length = 0; anKey = ''; };
+cLevel.oninput = () => { setCalcDir(0); calc.frac = cLevel.value / 100; };
+cScale.oninput = () => { calc.scale = +cScale.value; $('cScaleV').textContent = `×${calc.scale}`; };
+
+function setMode(m) {
+  if (m === 'calc') buildAnalysis();
+  mode = m;
+  $('tabAnim').classList.toggle('on', m === 'anim');
+  $('tabCalc').classList.toggle('on', m === 'calc');
+  $('ctlAnim').hidden = m !== 'anim';
+  $('ctlCalc').hidden = m !== 'calc';
+  $('res').hidden = m !== 'calc';
+  $('legend').hidden = m === 'calc';
+  CALC.visible = m === 'calc';
+  marker.visible = false;
+  P.length = 0;
+  anKey = '';
+  if (m === 'calc') {
+    T = T_BUILD + 0.5;                     // silo armado
+    calc.frac = 0;
+    setTransparent(false);
+    setCalcDir(1);                         // arranca llenando
+  } else {
+    reset();
+  }
+}
+$('tabAnim').onclick = () => mode !== 'anim' && setMode('anim');
+$('tabCalc').onclick = () => mode !== 'calc' && setMode('calc');
+
 addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return;
-  if (e.code === 'Space') { e.preventDefault(); togglePause(); }
-  else if (e.key === 'r' || e.key === 'R') reset();
-  else if (e.key === 't' || e.key === 'T') document.getElementById('bTrans').click();
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space') {
+    e.preventDefault();
+    if (mode === 'anim') togglePause(); else setCalcDir(calc.dir ? 0 : calc.lastDir);
+  } else if (e.key === 'r' || e.key === 'R') { if (mode === 'anim') reset(); else { calc.frac = 0; setCalcDir(1); } }
+  else if (e.key === 't' || e.key === 'T') $('bTrans').click();
 });
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -597,14 +1343,22 @@ addEventListener('resize', () => {
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
-  step(paused ? 0 : dt * speed);
+  step(dt * speed);
   controls.update();
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
 });
+if (location.hash === '#tensiones') setMode('calc');
+else setTimeout(buildAnalysis, 400);       // precalcula placas y pórtico sin trabar el arranque
 
 // Acceso para depuración / capturas
-window.__silo = { setTime: t => { T = t; }, get T() { return T; } };
+window.__silo = {
+  setTime: t => { T = t; }, get T() { return T; },
+  setMode, setFrac: f => { setCalcDir(0); calc.frac = f; },
+  setBoth: b => { calc.both = b; anKey = ''; },
+  results: () => results(loadsAt([0, 1].map(c => levelFromFrac(c === 0 || calc.both ? calc.frac : 0)))),
+  plates: () => [...plateCache.entries()].map(([k, P]) => ({ k, alfa: P.wMax / Math.min(P.Lx, P.Ly) ** 4, beta: P.mMax / Math.min(P.Lx, P.Ly) ** 2 })),
+};
 </script>
 </body>
 </html>
