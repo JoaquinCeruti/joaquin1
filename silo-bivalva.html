@@ -89,7 +89,7 @@ button.on { background: var(--btn-on); color: var(--btn-on-fg); border-color: va
 
 <div id="hud" class="panel">
   <h1>Silo bivalva</h1>
-  <div class="sub">2 compartimentos 2,5 × 1,6 m · H = 6 m · chapa 6,35 mm</div>
+  <div class="sub">2 compartimentos 3,0 × 1,5 m · H = 6 m · chapa 3/16" (4,76 mm)</div>
   <div id="phase">Cargando…</div>
   <div class="bar"><div id="prog"></div></div>
   <div class="btns">
@@ -110,14 +110,14 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
 // ------------------------------------------------------------------
-// Geometría (metros). Eje X = lado de 2,5 m; eje Z = lado de 3,2 m
-// (los dos compartimentos están uno detrás del otro sobre Z).
+// Geometría (metros). Planta 3,0 × 3,0 m. Eje X = paralelo al tabique; eje Z = perpendicular
+// (los dos compartimentos de 3,0 × 1,5 m están uno detrás del otro sobre Z).
 // ------------------------------------------------------------------
-const A = 2.5;                 // ancho en planta
-const BC = 1.6;                // profundidad de cada compartimento
-const L = 2 * BC;              // profundidad total (3,2 m)
+const A = 3.0;                 // ancho en planta
+const BC = 1.5;                // profundidad de cada compartimento
+const L = 2 * BC;              // profundidad total (3,0 m)
 const H = 6.0;                 // altura de chapa lisa
-const TW = 0.00635;            // chapa 6,35 mm
+const TW = 0.00476;            // chapa 3/16" (4,76 mm)
 const PLATE = 0.25, PLATE_T = 0.009525;   // placa base 250x250x3/8"
 const LEG_H = 3.0, S_LEG = 0.15;          // patas SHS 150x150x3,2
 const Y0 = PLATE_T + LEG_H;               // cota del fondo del cuerpo
@@ -199,14 +199,14 @@ const TYPES = {
   platea:  { name: 'Platea de hormigón',                color: 0x9d9d96, mat: std(0x9d9d96, { roughness: 0.95, metalness: 0 }) },
   placa:   { name: 'Placa base 250×250×3/8"',           color: 0x3d4450, mat: std(0x3d4450, { metalness: 0.6 }) },
   pata:    { name: 'Pata SHS 150×150×3,2',              color: 0xc0392b, mat: std(0xc0392b) },
-  tolva:   { name: 'Tolva 30° · chapa 6,35 mm',         color: 0x4f86b8, mat: std(0x4f86b8, { side: THREE.DoubleSide }) },
+  tolva:   { name: 'Tolva · chapa 3/16"',             color: 0x4f86b8, mat: std(0x4f86b8, { side: THREE.DoubleSide }) },
   boca:    { name: 'Boca de descarga',                  color: 0x2b2b2b, mat: std(0x2b2b2b) },
-  chapa:   { name: 'Chapa lisa 6,35 mm',                color: 0xbcc7d2, mat: std(0xbcc7d2, { side: THREE.DoubleSide, metalness: 0.45, roughness: 0.45 }) },
-  tabique: { name: 'Tabique · chapa 6,35 mm',           color: 0x8fb0d4, mat: std(0x8fb0d4, { side: THREE.DoubleSide }) },
+  chapa:   { name: 'Chapa lisa 3/16" (4,76 mm)',       color: 0xbcc7d2, mat: std(0xbcc7d2, { side: THREE.DoubleSide, metalness: 0.45, roughness: 0.45 }) },
+  tabique: { name: 'Tabique · chapa 3/16"',            color: 0x8fb0d4, mat: std(0x8fb0d4, { side: THREE.DoubleSide }) },
   anillo:  { name: 'Anillo SHS 80×80×2,5',              color: 0xf0a320, mat: std(0xf0a320) },
   vert:    { name: 'Perfil vertical SHS 80×80 (adoptado)', color: 0x2e9e5b, mat: std(0x2e9e5b) },
   ptab:    { name: 'Perfil tabique SHS 40×40×3,2',      color: 0x8e44ad, mat: std(0x8e44ad) },
-  techo:   { name: 'Techo cerrado · chapa',             color: 0x707d8c, mat: std(0x707d8c, { side: THREE.DoubleSide }) },
+  techo:   { name: 'Techo cerrado · chapa 3/16"',      color: 0x707d8c, mat: std(0x707d8c, { side: THREE.DoubleSide }) },
   mani:    { name: 'Maní',                              color: 0xc8955a, mat: null },
 };
 const SHELL = [TYPES.tolva.mat, TYPES.chapa.mat, TYPES.tabique.mat, TYPES.techo.mat];
@@ -288,7 +288,7 @@ for (const zc of COMP_Z) {
   add(2, box(OUT + 0.02, 0.22, OUT + 0.02, 'boca', 0, Y0 - HOP - 0.11, zc));
   add(2, box(OUT + 0.14, 0.02, OUT + 0.14, 'boca', 0, Y0 - HOP - 0.22, zc));
 }
-label(2, 'tolva', '<b>Tolva</b> 30° · h = 0,5 m', 0, Y0 - 0.25, BC / 2 + 0.5);
+label(2, 'tolva', '<b>Tolva</b> h = 0,5 m · chapa 3/16"', 0, Y0 - 0.25, BC / 2 + 0.5);
 label(2, 'boca', '<b>Boca de descarga</b>', 0.2, Y0 - HOP - 0.25, BC / 2);
 
 // 3 · Chapas (paneles de 1 m que se apilan) y tabique
@@ -300,8 +300,8 @@ for (let r = 0; r < 6; r++) {
   add(3, box(TW, 1, L - 2 * TW, 'chapa', A / 2 - TW / 2, y, 0));
   add(3, box(A - 2 * TW, 1, TW, 'tabique', 0, y, 0));
 }
-label(3, 'chapa', '<b>Chapa lisa</b> 6,35 mm · h = 6 m', -A / 2 - 0.05, Y0 + 3, BC / 2);
-label(3, 'tabique', '<b>Tabique</b> 6,35 mm', -A / 2 + 0.3, Y0 + H - 1.4, 0);
+label(3, 'chapa', '<b>Chapa lisa</b> 3/16" (4,76 mm) · h = 6 m', -A / 2 - 0.05, Y0 + 3, BC / 2);
+label(3, 'tabique', '<b>Tabique</b> 3/16" · a 1,5 m', -A / 2 + 0.3, Y0 + H - 1.4, 0);
 
 // 4 · Anillos SHS 80x80x2,5 cada 1 m
 for (const y of RING_Y) {

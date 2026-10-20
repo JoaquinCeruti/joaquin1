@@ -27,5 +27,7 @@ Abrí `silo-bivalva.html` en el navegador (necesita internet para cargar Three.j
 - **Llenado de maní** (volumen que sube + granos que caen por la boca de carga) y **descarga** por las dos bocas.
 - **Controles:** cámara orbitable, pausar, reiniciar, chapa semitransparente, etiquetas y velocidad. Teclas: Espacio, R, T.
 
-Notas de modelado: patas en las 4 esquinas; perfiles verticales con SHS 80×80 adoptado (sección no especificada);
-la tolva baja 0,5 m hasta una boca de 0,30 × 0,30 m, así que sus caras quedan a ~24° y ~38° (≈30° en promedio).
+Geometría: planta 3,0 × 3,0 m con tabique a 1,5 m (dos compartimentos de 3,0 × 1,5 m), chapa 3/16" (4,76 mm).
+
+Notas de modelado: patas en las 4 esquinas (separadas 3,0 m); perfiles verticales con SHS 80×80 adoptado (sección no especificada);
+la tolva baja 0,5 m hasta una boca de 0,30 × 0,30 m, así que sus caras quedan a ~20° (lado de 3,0 m) y ~40° (lado de 1,5 m).
